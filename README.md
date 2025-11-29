@@ -1,221 +1,115 @@
-# 🥃 BarrelVerse
+# 🍾 BarrelVerse
 
-**The Ultimate Spirits Knowledge & Collection Platform**
+> The Ultimate Spirits Collection & Trivia Platform
 
-A CR AudioViz AI Production | Powered by Javari AI
+[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black)](https://barrelverse-five.vercel.app)
+[![Built with Next.js](https://img.shields.io/badge/Built%20with-Next.js%2014-black)](https://nextjs.org)
+[![Database: Supabase](https://img.shields.io/badge/Database-Supabase-green)](https://supabase.com)
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Next.js](https://img.shields.io/badge/Next.js-14-black)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue)
-![Tailwind](https://img.shields.io/badge/Tailwind-3.4-38B2AC)
+## 🚀 Live Demo
 
----
+**Production:** https://barrelverse-five.vercel.app
 
-## 🌟 Overview
+## 📋 Features
 
-BarrelVerse is a comprehensive spirits platform covering **all 13 spirit categories equally**:
+### 🎮 Trivia Games
+- **Quick Pour** - 10 random questions, 30s each
+- **Masters Challenge** - 25 expert questions
+- **Daily Dram** - Category-focused gameplay
+- **Speed Round** - 15-second quick-fire mode
 
-| Category | Games | Trivia |
-|----------|-------|--------|
-| 🥃 Bourbon | 8+ | 150+ |
-| 🏴󠁧󠁢󠁳󠁣󠁴󠁿 Scotch | 8+ | 150+ |
-| ☘️ Irish Whiskey | 6+ | 100+ |
-| 🇯🇵 Japanese Whisky | 5+ | 80+ |
-| 🍷 Wine | 9+ | 150+ |
-| 🍺 Beer | 8+ | 150+ |
-| 🌵 Tequila & Mezcal | 7+ | 100+ |
-| 🏝️ Rum | 7+ | 100+ |
-| 🫒 Gin | 7+ | 100+ |
-| 🧊 Vodka | 5+ | 80+ |
-| 🍇 Cognac & Brandy | 6+ | 100+ |
-| 🍶 Sake & Asian | 5+ | 80+ |
-| 🧪 Liqueurs | 5+ | 80+ |
+### 🥃 Spirit Collection
+- Browse 30+ real spirits with detailed info
+- Track your personal collection
+- Filter by category, rarity, and more
+- Grid and list view modes
 
-**Total: 100+ Games | 1,000+ Trivia Questions**
+### 💰 $PROOF Token System
+- Earn tokens by playing trivia
+- Redeem for rewards and merchandise
+- Track your balance and transactions
 
----
-
-## ✨ Features
-
-### 🎮 Interactive Games
-- Trivia challenges across all categories
-- Blind tasting simulations
-- Region matching
-- Price guessing
-- Timeline ordering
-- And more...
-
-### 📱 Collection Tracking
-- Barcode scanning
-- Bottle inventory management
-- Wishlist & watch lists
-- Value tracking
-- Collection analytics
-
-### 🏆 $PROOF Rewards
-- Earn tokens for playing games
-- Rewards for reviews & contributions
-- Redeem for discounts & perks
-- Leaderboards & competitions
-
-### 📚 Spirits Academy
-- Beginner to expert courses
-- Video lessons
-- Certifications
-- Progress tracking
-
-### 👥 Community
-- User reviews & ratings
-- Clubs & groups
-- Virtual tastings
-- Direct messaging
-
-### 🛒 Marketplace
-- Buy, sell, and trade
-- Price tracking
-- Authentication services
-- Secondary market data
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Node.js 20+
-- npm or yarn
-- Supabase account
-- Stripe account (for payments)
-
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/roy-henderson/barrelverse.git
-cd barrelverse
-
-# Install dependencies
-npm install
-
-# Copy environment variables
-cp .env.example .env.local
-
-# Fill in your environment variables in .env.local
-
-# Run development server
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) to view the app.
-
-### Environment Variables
-
-See `.env.example` for all required variables. Key ones:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxx
-STRIPE_SECRET_KEY=sk_test_xxx
-```
-
----
-
-## 📁 Project Structure
-
-```
-barrelverse/
-├── app/
-│   ├── page.tsx          # Home page with age gate
-│   ├── layout.tsx        # Root layout with nav/footer
-│   ├── globals.css       # Global styles
-│   ├── games/            # Games hub
-│   ├── explore/          # Category exploration
-│   ├── collection/       # Collection management
-│   ├── academy/          # Learning courses
-│   ├── docs/             # Documentation
-│   └── javari/           # AI assistant
-├── components/           # Reusable components
-├── lib/                  # Utilities & services
-├── public/               # Static assets
-├── styles/               # Additional styles
-└── types/                # TypeScript types
-```
-
----
+### 🎓 Academy (Coming Soon)
+- Educational courses on spirits
+- Earn certificates and badges
+- Progressive learning paths
 
 ## 🛠️ Tech Stack
 
 - **Framework:** Next.js 14 (App Router)
-- **Language:** TypeScript
-- **Styling:** Tailwind CSS
 - **Database:** Supabase (PostgreSQL)
 - **Auth:** Supabase Auth
-- **Payments:** Stripe
-- **AI:** Javari AI (powered by Claude/GPT-4)
+- **Styling:** Tailwind CSS
+- **Deployment:** Vercel
 
----
+## 📦 Database Setup
 
-## 📊 Database Schema
+### 1. Run Schema
+Execute the schema in your Supabase SQL Editor:
+\`\`\`bash
+database/schema.sql
+\`\`\`
 
-52 tables covering:
-- User profiles & authentication
-- Collection management
-- Reviews & ratings
-- Marketplace transactions
-- Gamification & achievements
-- Education & certifications
-- Social features
-- Analytics
+### 2. Run Seed Data
+Populate initial data:
+\`\`\`bash
+database/seed-data.sql
+\`\`\`
 
-Full schema available in `/docs/database-schema.sql`
+## 🔧 Environment Variables
 
----
+Required in Vercel/local:
 
-## 🔐 Legal Compliance
+\`\`\`env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+NEXT_PUBLIC_APP_URL=https://your-domain.vercel.app
+\`\`\`
 
-⚠️ **Age Verification Required** - Users must be 21+ to access
+## 📁 Project Structure
 
-- Age gate on first visit
-- ID verification for marketplace
-- State shipping restrictions
-- Responsible drinking messaging
+\`\`\`
+barrelverse/
+├── app/
+│   ├── auth/
+│   │   ├── login/page.tsx
+│   │   └── register/page.tsx
+│   ├── games/page.tsx
+│   ├── collection/page.tsx
+│   └── page.tsx
+├── lib/
+│   ├── supabase/
+│   │   ├── client.ts
+│   │   └── server.ts
+│   ├── hooks/
+│   │   ├── use-auth.ts
+│   │   ├── use-trivia.ts
+│   │   └── use-collection.ts
+│   └── types/
+│       └── database.ts
+├── database/
+│   ├── schema.sql
+│   └── seed-data.sql
+└── README.md
+\`\`\`
 
----
+## 🎯 Roadmap
 
-## 🤝 Contributing
-
-Contributions welcome! Please read our contributing guidelines first.
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
----
+- [x] Core trivia gameplay
+- [x] Spirit collection system
+- [x] User authentication
+- [x] $PROOF token economy
+- [ ] Leaderboards
+- [ ] Academy courses
+- [ ] Rewards marketplace
+- [ ] Social features
+- [ ] Mobile app
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) for details.
+Copyright © 2025 CR AudioViz AI, LLC. All rights reserved.
 
 ---
 
-## 🏢 About
-
-**CR AudioViz AI, LLC**  
-The Ultimate Spirits Knowledge & Collection Platform
-
-Built with ❤️ in Florida
-
----
-
-## 🔗 Links
-
-- [Documentation](https://barrelverse.com/docs)
-- [API Reference](https://barrelverse.com/docs/api)
-- [Support](mailto:support@barrelverse.com)
-
----
-
-*Drink Responsibly. Must be 21+ to use this platform.*
+**Built with 🥃 by CR AudioViz AI**
