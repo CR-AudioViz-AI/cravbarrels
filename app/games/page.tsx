@@ -5,7 +5,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useTrivia, CATEGORY_INFO, DIFFICULTY_INFO } from '@/lib/hooks/use-trivia'
 import { useAuth } from '@/lib/hooks/use-auth'
@@ -55,16 +55,19 @@ export default function GamesPage() {
   const { user, profile, loading: authLoading } = useAuth()
   const {
     questions,
-    currentQuestion,
+    currentIndex,
     score,
-    streak,
-    isPlaying,
-    loading: triviaLoading,
+    proofEarned,
+    answers,
+    isComplete,
+    isLoading: triviaLoading,
     error,
+    currentQuestion,
     startGame,
     submitAnswer,
-    endGame,
-    getProofEarned,
+    resetGame,
+    getGameStats,
+    progress,
   } = useTrivia()
 
   const [selectedMode, setSelectedMode] = useState<string | null>(null)
@@ -73,7 +76,24 @@ export default function GamesPage() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
   const [showResult, setShowResult] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState(30)
-  const [questionIndex, setQuestionIndex] = useState(0)
+
+  const loading = authLoading || triviaLoading
+  const isPlaying = questions.length > 0 && !isComplete
+
+  // Calculate streak from answers
+  const streak = useMemo(() => {
+    let maxStreak = 0
+    let currentStreak = 0
+    for (const answer of answers) {
+      if (answer.correct) {
+        currentStreak++
+        maxStreak = Math.max(maxStreak, currentStreak)
+      } else {
+        currentStreak = 0
+      }
+    }
+    return maxStreak
+  }, [answers])
 
   // Timer effect
   useEffect(() => {
@@ -103,7 +123,6 @@ export default function GamesPage() {
       : undefined
 
     await startGame(mode.questionCount, category, selectedDifficulty)
-    setQuestionIndex(0)
     setTimeRemaining(mode.timeLimit)
     setSelectedAnswer(null)
     setShowResult(false)
@@ -115,19 +134,15 @@ export default function GamesPage() {
     setSelectedAnswer(answer)
     setShowResult(true)
 
-    const correct = await submitAnswer(currentQuestion.id, answer)
+    const startTime = Date.now()
+    await submitAnswer(currentQuestion.id, answer, Date.now() - startTime)
 
     // Wait briefly to show result, then move to next question
     setTimeout(() => {
-      if (questionIndex + 1 < questions.length) {
-        setQuestionIndex((prev) => prev + 1)
-        setSelectedAnswer(null)
-        setShowResult(false)
-        const mode = GAME_MODES.find((m) => m.id === selectedMode)
-        setTimeRemaining(mode?.timeLimit || 30)
-      } else {
-        endGame()
-      }
+      setSelectedAnswer(null)
+      setShowResult(false)
+      const mode = GAME_MODES.find((m) => m.id === selectedMode)
+      setTimeRemaining(mode?.timeLimit || 30)
     }, 1500)
   }
 
@@ -137,15 +152,12 @@ export default function GamesPage() {
   }
 
   const handleEndGame = () => {
-    endGame()
+    resetGame()
     setSelectedMode(null)
-    setQuestionIndex(0)
   }
 
-  const loading = authLoading || triviaLoading
-
   // Mode Selection Screen
-  if (!isPlaying && !selectedMode) {
+  if (!isPlaying && !selectedMode && !isComplete) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-900 via-amber-800 to-stone-900 text-white">
         <div className="container mx-auto px-4 py-8">
@@ -158,7 +170,7 @@ export default function GamesPage() {
             <p className="text-xl text-amber-200">Test your spirits knowledge and earn $PROOF tokens!</p>
             {profile && (
               <p className="text-amber-300 mt-2">
-                Your $PROOF Balance: {profile.proof_balance.toLocaleString()}
+                Your $PROOF Balance: {profile.proof_balance?.toLocaleString() || 0}
               </p>
             )}
           </div>
@@ -199,7 +211,7 @@ export default function GamesPage() {
   }
 
   // Game Configuration Screen
-  if (!isPlaying && selectedMode) {
+  if (!isPlaying && selectedMode && !isComplete) {
     const mode = GAME_MODES.find((m) => m.id === selectedMode)
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-900 via-amber-800 to-stone-900 text-white">
@@ -229,7 +241,7 @@ export default function GamesPage() {
                   <option value="all">All Categories</option>
                   {Object.entries(CATEGORY_INFO).map(([key, info]) => (
                     <option key={key} value={key}>
-                      {info.icon} {info.name}
+                      {info.icon} {info.label}
                     </option>
                   ))}
                 </select>
@@ -238,7 +250,7 @@ export default function GamesPage() {
 
             <div className="mb-8">
               <label className="block text-amber-300 mb-2 font-semibold">Difficulty</label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {Object.entries(DIFFICULTY_INFO).map(([key, info]) => (
                   <button
                     key={key}
@@ -249,7 +261,7 @@ export default function GamesPage() {
                         : 'bg-stone-900 border-stone-700 text-stone-300 hover:border-amber-600/50'
                     }`}
                   >
-                    <div className="font-semibold">{info.name}</div>
+                    <div className="font-semibold">{info.label}</div>
                     <div className="text-xs opacity-75">{info.multiplier}x $PROOF</div>
                   </button>
                 ))}
@@ -269,24 +281,9 @@ export default function GamesPage() {
     )
   }
 
-  // Active Game Screen
-  const mode = GAME_MODES.find((m) => m.id === selectedMode)
-  const progress = ((questionIndex + 1) / questions.length) * 100
-
-  if (!currentQuestion) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-900 via-amber-800 to-stone-900 text-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin text-5xl mb-4">🥃</div>
-          <p className="text-xl">Loading questions...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Game Results Screen (when game ends)
-  if (!isPlaying && questionIndex > 0) {
-    const proofEarned = getProofEarned()
+  // Game Results Screen
+  if (isComplete) {
+    const stats = getGameStats()
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-900 via-amber-800 to-stone-900 text-white">
         <div className="container mx-auto px-4 py-8">
@@ -296,15 +293,19 @@ export default function GamesPage() {
             
             <div className="grid grid-cols-2 gap-4 mb-8">
               <div className="bg-stone-900/50 rounded-lg p-4">
-                <div className="text-3xl font-bold text-amber-400">{score}</div>
-                <div className="text-stone-400">Correct Answers</div>
+                <div className="text-3xl font-bold text-amber-400">{stats.score}/{stats.total}</div>
+                <div className="text-stone-400">Correct</div>
               </div>
               <div className="bg-stone-900/50 rounded-lg p-4">
-                <div className="text-3xl font-bold text-amber-400">{streak}</div>
+                <div className="text-3xl font-bold text-amber-400">{stats.accuracy}%</div>
+                <div className="text-stone-400">Accuracy</div>
+              </div>
+              <div className="bg-stone-900/50 rounded-lg p-4">
+                <div className="text-3xl font-bold text-orange-400">{streak}🔥</div>
                 <div className="text-stone-400">Best Streak</div>
               </div>
-              <div className="bg-stone-900/50 rounded-lg p-4 col-span-2">
-                <div className="text-4xl font-bold text-green-400">+{proofEarned}</div>
+              <div className="bg-stone-900/50 rounded-lg p-4">
+                <div className="text-3xl font-bold text-green-400">+{stats.proofEarned}</div>
                 <div className="text-stone-400">$PROOF Earned</div>
               </div>
             </div>
@@ -329,7 +330,23 @@ export default function GamesPage() {
     )
   }
 
-  // Question Screen
+  // Loading State
+  if (!currentQuestion) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-amber-900 via-amber-800 to-stone-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin text-5xl mb-4">🥃</div>
+          <p className="text-xl">Loading questions...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Active Game Screen
+  const mode = GAME_MODES.find((m) => m.id === selectedMode)
+  const categoryInfo = CATEGORY_INFO[currentQuestion.category]
+  const difficultyInfo = DIFFICULTY_INFO[currentQuestion.difficulty]
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-900 via-amber-800 to-stone-900 text-white">
       <div className="container mx-auto px-4 py-8">
@@ -337,10 +354,10 @@ export default function GamesPage() {
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
             <span className="text-amber-300">
-              Question {questionIndex + 1}/{questions.length}
+              Question {progress.current}/{progress.total}
             </span>
             <span className="bg-stone-800 px-3 py-1 rounded-full text-sm">
-              {CATEGORY_INFO[currentQuestion.category]?.icon} {CATEGORY_INFO[currentQuestion.category]?.name}
+              {categoryInfo?.icon} {categoryInfo?.label}
             </span>
           </div>
           <button
@@ -355,7 +372,7 @@ export default function GamesPage() {
         <div className="w-full h-2 bg-stone-800 rounded-full mb-8">
           <div
             className="h-full bg-gradient-to-r from-amber-500 to-amber-400 rounded-full transition-all"
-            style={{ width: `${progress}%` }}
+            style={{ width: `${progress.percentage}%` }}
           />
         </div>
 
@@ -381,12 +398,8 @@ export default function GamesPage() {
         <div className="max-w-2xl mx-auto">
           <div className="bg-stone-800/50 border border-amber-600/30 rounded-xl p-8 mb-6">
             <div className="flex justify-between items-start mb-4">
-              <span className={`px-3 py-1 rounded-full text-sm ${
-                currentQuestion.difficulty === 'easy' ? 'bg-green-600/30 text-green-300' :
-                currentQuestion.difficulty === 'medium' ? 'bg-amber-600/30 text-amber-300' :
-                'bg-red-600/30 text-red-300'
-              }`}>
-                {DIFFICULTY_INFO[currentQuestion.difficulty]?.name}
+              <span className={`px-3 py-1 rounded-full text-sm bg-${difficultyInfo?.color}-600/30 text-${difficultyInfo?.color}-300`}>
+                {difficultyInfo?.label}
               </span>
               <span className="text-amber-400 text-sm">
                 +{currentQuestion.points * (mode?.multiplier || 1)} $PROOF
