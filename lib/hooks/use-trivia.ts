@@ -13,17 +13,24 @@ export const CATEGORY_INFO: Record<TriviaCategory, { label: string; icon: string
   tequila: { label: 'Tequila', icon: '🌵', color: 'lime' },
   rum: { label: 'Rum', icon: '🏝️', color: 'orange' },
   gin: { label: 'Gin', icon: '🫒', color: 'teal' },
+// Category display information - includes ALL TriviaCategory values
+export const CATEGORY_INFO: Record<TriviaCategory, { label: string; icon: string; color: string }> = {
+  bourbon: { label: 'Bourbon', icon: '🥃', color: 'amber' },
+  scotch: { label: 'Scotch', icon: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', color: 'amber' },
+  irish: { label: 'Irish', icon: '☘️', color: 'green' },
+  japanese: { label: 'Japanese', icon: '🇯🇵', color: 'red' },
+  tequila: { label: 'Tequila', icon: '🌵', color: 'lime' },
+  rum: { label: 'Rum', icon: '🏝️', color: 'orange' },
+  gin: { label: 'Gin', icon: '🫒', color: 'teal' },
   cognac: { label: 'Cognac', icon: '🍇', color: 'purple' },
   general: { label: 'General', icon: '📚', color: 'blue' },
   production: { label: 'Production', icon: '🏭', color: 'stone' },
   history: { label: 'History', icon: '📜', color: 'amber' },
-}
-
-export const DIFFICULTY_INFO: Record<Difficulty, { label: string; multiplier: number; color: string }> = {
-  easy: { label: 'Easy', multiplier: 1, color: 'green' },
-  medium: { label: 'Medium', multiplier: 1.5, color: 'yellow' },
-  hard: { label: 'Hard', multiplier: 2, color: 'orange' },
-  expert: { label: 'Expert', multiplier: 3, color: 'red' },
+  wine: { label: 'Wine', icon: '🍷', color: 'red' },
+  beer: { label: 'Beer', icon: '🍺', color: 'yellow' },
+  vodka: { label: 'Vodka', icon: '🧊', color: 'slate' },
+  sake: { label: 'Sake', icon: '🍶', color: 'white' },
+  brands: { label: 'Brands', icon: '🏷️', color: 'blue' },
 }
 
 interface TriviaState {
