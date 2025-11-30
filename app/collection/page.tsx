@@ -264,7 +264,7 @@ function CollectionContent() {
         {/* Error */}
         {error && (
           <div className="bg-red-900/30 border border-red-500/50 rounded-lg p-4 mb-8">
-            <p className="text-red-200">{error}</p>
+            <p className="text-red-200">{error instanceof Error ? error.message : String(error)}</p>
           </div>
         )}
 
