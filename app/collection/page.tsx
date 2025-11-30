@@ -133,7 +133,7 @@ function CollectionContent() {
           {user && stats && (
             <div className="flex gap-4 text-sm">
               <div className="bg-stone-800/50 rounded-lg px-4 py-2">
-                <span className="text-amber-400 font-bold">{stats.totalSpirits}</span>
+                <span className="text-amber-400 font-bold">{stats.uniqueSpirits}</span>
                 <span className="text-stone-400 ml-1">Collected</span>
               </div>
             </div>
