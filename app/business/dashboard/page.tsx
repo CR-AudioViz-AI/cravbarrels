@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+export const dynamic = 'force-dynamic'
+
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -38,7 +40,7 @@ type Spirit = {
   msrp: number
 }
 
-export default function BusinessDashboardPage() {
+function DashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, loading: authLoading } = useAuth()
@@ -53,7 +55,7 @@ export default function BusinessDashboardPage() {
   const [newPrice, setNewPrice] = useState('')
 
   useEffect(() => {
-    if (searchParams.get('welcome') === 'true') {
+    if (searchParams?.get('welcome') === 'true') {
       setShowWelcome(true)
     }
   }, [searchParams])
@@ -72,7 +74,6 @@ export default function BusinessDashboardPage() {
   const fetchBusiness = async () => {
     const supabase = createClient()
     
-    // Get user's business
     const { data: bizData, error: bizError } = await supabase
       .from('bv_businesses')
       .select('*')
@@ -86,7 +87,6 @@ export default function BusinessDashboardPage() {
 
     setBusiness(bizData)
 
-    // Get inventory with spirit details
     const { data: invData } = await supabase
       .from('bv_business_inventory')
       .select(`
@@ -117,7 +117,6 @@ export default function BusinessDashboardPage() {
     setLoading(false)
   }
 
-  // Search spirits to add
   useEffect(() => {
     if (spiritSearch.length < 2) {
       setSpirits([])
@@ -205,7 +204,6 @@ export default function BusinessDashboardPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-stone-900 via-amber-950 to-stone-900 text-white">
       <div className="container mx-auto px-4 py-8">
-        {/* Welcome Modal */}
         {showWelcome && (
           <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
             <div className="bg-stone-800 border border-amber-600/30 rounded-xl max-w-md w-full p-8 text-center">
@@ -227,7 +225,6 @@ export default function BusinessDashboardPage() {
           </div>
         )}
 
-        {/* Add Spirit Modal */}
         {showAddModal && (
           <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
             <div className="bg-stone-800 border border-amber-600/30 rounded-xl max-w-lg w-full p-6">
@@ -312,7 +309,6 @@ export default function BusinessDashboardPage() {
           </div>
         )}
 
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <Link href="/" className="text-amber-300 hover:text-amber-200 text-sm">
@@ -322,12 +318,6 @@ export default function BusinessDashboardPage() {
             <p className="text-stone-400">{business.city}, {business.state} • {business.business_type.replace('_', ' ')}</p>
           </div>
           <div className="flex gap-3">
-            <Link
-              href={`/store/${business.id}`}
-              className="px-4 py-2 border border-stone-600 hover:bg-stone-800 rounded-lg"
-            >
-              View Public Page
-            </Link>
             <button
               onClick={() => setShowAddModal(true)}
               disabled={!canAddMore}
@@ -338,7 +328,6 @@ export default function BusinessDashboardPage() {
           </div>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-stone-800/50 border border-amber-600/30 rounded-xl p-4">
             <p className="text-stone-400 text-sm">Spirits Listed</p>
@@ -358,7 +347,6 @@ export default function BusinessDashboardPage() {
           </div>
         </div>
 
-        {/* Upgrade Banner */}
         {business.subscription_tier === 'free' && (
           <div className="bg-gradient-to-r from-amber-900/50 to-amber-800/50 border border-amber-600/30 rounded-xl p-4 mb-8 flex items-center justify-between">
             <div>
@@ -371,7 +359,6 @@ export default function BusinessDashboardPage() {
           </div>
         )}
 
-        {/* Inventory List */}
         <div className="bg-stone-800/50 border border-amber-600/30 rounded-xl overflow-hidden">
           <div className="p-4 border-b border-amber-600/30">
             <h2 className="text-lg font-bold">Your Inventory</h2>
@@ -425,5 +412,17 @@ export default function BusinessDashboardPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function BusinessDashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-stone-900 via-amber-950 to-stone-900 text-white flex items-center justify-center">
+        <div className="animate-spin text-5xl">🏪</div>
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   )
 }
