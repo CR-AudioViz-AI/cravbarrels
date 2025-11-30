@@ -1,19 +1,10 @@
 'use client'
 
-import { useState, useCallback, useMemo, useRef } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { TriviaQuestion, TriviaCategory, Difficulty, GameType } from '@/lib/types/database'
 
-// Category display information
-export const CATEGORY_INFO: Record<TriviaCategory, { label: string; icon: string; color: string }> = {
-  bourbon: { label: 'Bourbon', icon: '🥃', color: 'amber' },
-  scotch: { label: 'Scotch', icon: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', color: 'amber' },
-  irish: { label: 'Irish', icon: '☘️', color: 'green' },
-  japanese: { label: 'Japanese', icon: '🇯🇵', color: 'red' },
-  tequila: { label: 'Tequila', icon: '🌵', color: 'lime' },
-  rum: { label: 'Rum', icon: '🏝️', color: 'orange' },
-  gin: { label: 'Gin', icon: '🫒', color: 'teal' },
-// Category display information - includes ALL TriviaCategory values
+// Category display information - ALL TriviaCategory values
 export const CATEGORY_INFO: Record<TriviaCategory, { label: string; icon: string; color: string }> = {
   bourbon: { label: 'Bourbon', icon: '🥃', color: 'amber' },
   scotch: { label: 'Scotch', icon: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', color: 'amber' },
@@ -33,9 +24,16 @@ export const CATEGORY_INFO: Record<TriviaCategory, { label: string; icon: string
   brands: { label: 'Brands', icon: '🏷️', color: 'blue' },
 }
 
+export const DIFFICULTY_INFO: Record<Difficulty, { label: string; multiplier: number; color: string }> = {
+  easy: { label: 'Easy', multiplier: 1, color: 'green' },
+  medium: { label: 'Medium', multiplier: 1.5, color: 'yellow' },
+  hard: { label: 'Hard', multiplier: 2, color: 'orange' },
+  expert: { label: 'Expert', multiplier: 3, color: 'red' },
+}
+
 interface TriviaState {
   questions: TriviaQuestion[]
-  shuffledAnswersMap: Map<string, string[]>  // Store shuffled answers per question ID
+  shuffledAnswersMap: Map<string, string[]>
   currentIndex: number
   score: number
   proofEarned: number
@@ -57,7 +55,6 @@ const initialState: TriviaState = {
   startTime: null,
 }
 
-// Stable shuffle function using Fisher-Yates
 function shuffleArray<T>(array: T[]): T[] {
   const shuffled = [...array]
   for (let i = shuffled.length - 1; i > 0; i--) {
@@ -72,7 +69,6 @@ export function useTrivia() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
-  // Pre-shuffle answers when questions load
   const preprocessQuestions = useCallback((questions: TriviaQuestion[]): Map<string, string[]> => {
     const answersMap = new Map<string, string[]>()
     
@@ -97,7 +93,6 @@ export function useTrivia() {
     return answersMap
   }, [])
 
-  // Start a new game
   const startGame = useCallback(async (
     gameType: GameType,
     category?: TriviaCategory,
@@ -125,10 +120,7 @@ export function useTrivia() {
 
       if (fetchError) throw fetchError
 
-      // Shuffle and limit questions
       const shuffled = shuffleArray(data || []).slice(0, limit)
-      
-      // Pre-shuffle all answers ONCE
       const answersMap = preprocessQuestions(shuffled)
 
       setState({
@@ -150,7 +142,6 @@ export function useTrivia() {
     }
   }, [preprocessQuestions])
 
-  // Submit an answer
   const submitAnswer = useCallback(async (answer: string, responseTimeMs: number) => {
     const currentQuestion = state.questions[state.currentIndex]
     if (!currentQuestion) return null
@@ -184,12 +175,10 @@ export function useTrivia() {
     }
   }, [state.currentIndex, state.questions])
 
-  // Get current question with PRE-SHUFFLED answers (stable - no re-shuffle on render)
   const currentQuestion = useMemo(() => {
     const question = state.questions[state.currentIndex]
     if (!question) return null
 
-    // Get the pre-shuffled answers from the map
     const shuffledAnswers = state.shuffledAnswersMap.get(question.id) || []
 
     return {
@@ -200,7 +189,6 @@ export function useTrivia() {
     }
   }, [state.questions, state.currentIndex, state.shuffledAnswersMap])
 
-  // Save game session to database
   const saveGameSession = useCallback(async (userId?: string) => {
     if (state.questions.length === 0) return { success: false, error: new Error('No game to save') }
 
@@ -217,7 +205,6 @@ export function useTrivia() {
 
       if (saveError) throw saveError
 
-      // Update user's proof balance if logged in
       if (userId && state.proofEarned > 0) {
         const { error: updateError } = await supabase.rpc('add_proof', {
           p_user_id: userId,
@@ -235,12 +222,10 @@ export function useTrivia() {
     }
   }, [state])
 
-  // Reset game
   const resetGame = useCallback(() => {
     setState(initialState)
   }, [])
 
-  // Get game stats
   const getGameStats = useCallback(() => {
     const totalQuestions = state.questions.length
     const correctAnswers = state.score
