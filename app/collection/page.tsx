@@ -40,7 +40,6 @@ function CollectionContent() {
     removeFromCollection,
   } = useCollection(user?.id)
 
-  // Initialize from URL params
   const initialCategory = searchParams?.get('category') as SpiritCategory | null
   const [selectedCategory, setSelectedCategory] = useState<SpiritCategory | 'all'>(initialCategory || 'all')
   const [selectedRarity, setSelectedRarity] = useState<Rarity | 'all'>('all')
@@ -50,7 +49,6 @@ function CollectionContent() {
   const [showOnlyOwned, setShowOnlyOwned] = useState(false)
   const [selectedSpirit, setSelectedSpirit] = useState<typeof spirits[0] | null>(null)
 
-  // Update category when URL changes
   useEffect(() => {
     const urlCategory = searchParams?.get('category') as SpiritCategory | null
     if (urlCategory && Object.keys(CATEGORY_DISPLAY).includes(urlCategory)) {
@@ -69,43 +67,47 @@ function CollectionContent() {
   const filteredSpirits = useMemo(() => {
     let result = [...spirits]
 
-    // Category filter
     if (selectedCategory !== 'all') {
       result = result.filter(spirit => spirit.category === selectedCategory)
     }
 
-    // Rarity filter
     if (selectedRarity !== 'all') {
       result = result.filter(spirit => spirit.rarity === selectedRarity)
     }
 
-    // Owned filter
     if (showOnlyOwned) {
       result = result.filter(spirit => isInCollection(spirit.id))
     }
 
-    // Search filter - THIS IS THE KEY FIX
+    // Search filter - FIXED SYNTAX
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim()
-      result = result.filter(spirit =>
-        spirit.name.toLowerCase().includes(query) ||
-        spirit.brand?.toLowerCase() || ''.includes(query) ||
-        spirit.distillery?.toLowerCase() || ''.includes(query) ||
-        spirit.category.toLowerCase().includes(query) ||
-        spirit.country?.toLowerCase().includes(query) ||
-        spirit.region?.toLowerCase().includes(query)
-      )
+      result = result.filter(spirit => {
+        const name = spirit.name?.toLowerCase() || ''
+        const brand = spirit.brand?.toLowerCase() || ''
+        const distillery = spirit.distillery?.toLowerCase() || ''
+        const category = spirit.category?.toLowerCase() || ''
+        const country = spirit.country?.toLowerCase() || ''
+        const region = spirit.region?.toLowerCase() || ''
+        
+        return name.includes(query) ||
+          brand.includes(query) ||
+          distillery.includes(query) ||
+          category.includes(query) ||
+          country.includes(query) ||
+          region.includes(query)
+      })
     }
 
-    // Sorting
+    // Sorting - FIXED TYPE SAFETY
     result.sort((a, b) => {
       switch (sortBy) {
         case 'name':
-          return a.name.localeCompare(b.name)
+          return (a.name || '').localeCompare(b.name || '')
         case 'proof':
-          return (b.proof || 0) - (a.proof || 0)
+          return (Number(b.proof) || 0) - (Number(a.proof) || 0)
         case 'age':
-          return (b.age_statement || 0) - (a.age_statement || 0)
+          return (Number(b.age_statement) || 0) - (Number(a.age_statement) || 0)
         case 'rarity':
           const rarityOrder = ['common', 'uncommon', 'rare', 'very_rare', 'ultra_rare', 'legendary']
           return rarityOrder.indexOf(b.rarity || 'common') - rarityOrder.indexOf(a.rarity || 'common')
@@ -129,10 +131,8 @@ function CollectionContent() {
     await removeFromCollection(spiritId)
   }
 
-  // Handle search submit
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    // Search happens automatically via filteredSpirits
   }
 
   const getRarityColor = (rarity: string) => {
@@ -150,7 +150,6 @@ function CollectionContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-stone-900 via-amber-950 to-stone-900 text-white">
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <Link href="/" className="text-amber-300 hover:text-amber-200 text-sm">
@@ -169,7 +168,6 @@ function CollectionContent() {
           )}
         </div>
 
-        {/* Search Bar - FIXED */}
         <form onSubmit={handleSearch} className="mb-6">
           <div className="flex gap-2">
             <input
@@ -188,9 +186,7 @@ function CollectionContent() {
           </div>
         </form>
 
-        {/* Filters */}
         <div className="flex flex-wrap gap-4 mb-6">
-          {/* Category Filter */}
           <div className="flex-1 min-w-[200px]">
             <label className="block text-sm text-stone-400 mb-1">Category</label>
             <select
@@ -205,7 +201,6 @@ function CollectionContent() {
             </select>
           </div>
 
-          {/* Rarity Filter */}
           <div className="flex-1 min-w-[200px]">
             <label className="block text-sm text-stone-400 mb-1">Rarity</label>
             <select
@@ -220,7 +215,6 @@ function CollectionContent() {
             </select>
           </div>
 
-          {/* Sort */}
           <div className="flex-1 min-w-[150px]">
             <label className="block text-sm text-stone-400 mb-1">Sort By</label>
             <select
@@ -234,7 +228,6 @@ function CollectionContent() {
             </select>
           </div>
 
-          {/* My Collection Toggle */}
           {user && (
             <div className="flex items-end">
               <button
@@ -251,13 +244,11 @@ function CollectionContent() {
           )}
         </div>
 
-        {/* Results Count */}
         <div className="mb-4 text-stone-400">
           Showing {filteredSpirits.length} of {spirits.length} spirits
-          {searchQuery && <span> matching "{searchQuery}"</span>}
+          {searchQuery && <span> matching &quot;{searchQuery}&quot;</span>}
         </div>
 
-        {/* Spirit Grid */}
         {loading ? (
           <div className="flex justify-center py-20">
             <div className="animate-spin text-5xl">🥃</div>
@@ -282,7 +273,6 @@ function CollectionContent() {
                   }`}
                   onClick={() => setSelectedSpirit(spirit)}
                 >
-                  {/* Spirit Image/Icon */}
                   <div className="h-32 bg-gradient-to-br from-stone-700 to-stone-800 flex items-center justify-center text-5xl relative">
                     🥃
                     {inCollection && (
@@ -297,7 +287,7 @@ function CollectionContent() {
 
                   <div className="p-4">
                     <h3 className="font-bold text-lg mb-1 truncate">{spirit.name}</h3>
-                    <p className="text-stone-400 text-sm mb-2">{spirit.brand}</p>
+                    <p className="text-stone-400 text-sm mb-2">{spirit.brand || 'Unknown'}</p>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-amber-400">{spirit.proof}° • {spirit.category}</span>
                       {spirit.msrp && <span className="text-stone-500">${spirit.msrp}</span>}
@@ -318,7 +308,6 @@ function CollectionContent() {
           </div>
         )}
 
-        {/* Spirit Detail Modal */}
         {selectedSpirit && (
           <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setSelectedSpirit(null)}>
             <div className="bg-stone-800 border border-amber-600/30 rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
@@ -326,7 +315,7 @@ function CollectionContent() {
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h2 className="text-2xl font-bold">{selectedSpirit.name}</h2>
-                    <p className="text-stone-400">{selectedSpirit.brand}</p>
+                    <p className="text-stone-400">{selectedSpirit.brand || 'Unknown Brand'}</p>
                   </div>
                   <button onClick={() => setSelectedSpirit(null)} className="text-stone-400 hover:text-white text-2xl">×</button>
                 </div>
