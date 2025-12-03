@@ -252,7 +252,7 @@ Return ONLY valid JSON array, no markdown.`;
         const spirits = JSON.parse(response.choices[0].message.content || '[]');
 
         for (const spirit of spirits) {
-          const { data: existing } = await supabase
+          const { data: existing } = await getSupabase()
             .from('bv_spirits')
             .select('id')
             .eq('name', spirit.name)
@@ -328,7 +328,7 @@ Return JSON:
 
     const article = JSON.parse(response.choices[0].message.content || '{}');
 
-    const { data: existing } = await supabase
+    const { data: existing } = await getSupabase()
       .from('bv_history_articles')
       .select('id')
       .eq('slug', article.slug)
@@ -406,7 +406,7 @@ Make questions engaging and educational. Avoid simple yes/no questions.`;
       const questions = JSON.parse(response.choices[0].message.content || '[]');
 
       for (const q of questions) {
-        const { data: existing } = await supabase
+        const { data: existing } = await getSupabase()
           .from('bv_trivia_questions')
           .select('id')
           .ilike('question', q.question.substring(0, 50) + '%')
@@ -503,7 +503,7 @@ Return JSON:
 
       const entry = JSON.parse(response.choices[0].message.content || '{}');
 
-      const { data: existing } = await supabase
+      const { data: existing } = await getSupabase()
         .from('bv_knowledge_base')
         .select('id')
         .eq('topic', entry.topic)
@@ -580,14 +580,14 @@ Return JSON:
 
     const course = JSON.parse(response.choices[0].message.content || '{}');
 
-    const { data: existing } = await supabase
+    const { data: existing } = await getSupabase()
       .from('bv_courses')
       .select('id')
       .ilike('title', course.title)
       .single();
 
     if (!existing && course.title) {
-      const { data: newCourse } = await supabase
+      const { data: newCourse } = await getSupabase()
         .from('bv_courses')
         .insert({
           title: course.title,
@@ -660,7 +660,7 @@ Return JSON array:
     let added = 0;
 
     for (const recipe of recipes) {
-      const { data: existing } = await supabase
+      const { data: existing } = await getSupabase()
         .from('bv_cocktail_recipes')
         .select('id')
         .eq('name', recipe.name)
