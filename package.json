@@ -1,7 +1,6 @@
 {
   "name": "barrelverse",
   "version": "1.0.0",
-  "description": "The Ultimate Spirits Knowledge & Collection Platform - A CR AudioViz AI Production | Powered by Javari AI",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -22,7 +21,8 @@
     "tailwind-merge": "^2.4.0",
     "framer-motion": "^11.3.0",
     "recharts": "^2.12.0",
-    "date-fns": "^3.6.0"
+    "date-fns": "^3.6.0",
+    "openai": "^4.56.0"
   },
   "devDependencies": {
     "typescript": "^5.5.0",
