@@ -13,10 +13,10 @@ interface BarrelConfig {
 }
 
 interface AgingResult {
-  currentAge: number; // in months
+  currentAge: number;
   color: string;
   colorHex: string;
-  angelShare: number; // percentage lost
+  angelShare: number;
   estimatedAbv: number;
   flavorProfile: {
     vanilla: number;
@@ -34,6 +34,17 @@ interface AgingResult {
   warnings: string[];
 }
 
+interface BarrelType {
+  name: string;
+  influence: number;
+  vanillaBoost?: number;
+  caramelBoost?: number;
+  fruitBoost?: number;
+  sweetBoost?: number;
+  tropicalBoost?: number;
+  tanninBoost?: number;
+}
+
 const SPIRIT_CONFIGS = {
   bourbon: { name: 'Bourbon', emoji: '🌽', baseAbv: 62.5, minAge: 24 },
   rye: { name: 'Rye Whiskey', emoji: '🌾', baseAbv: 62.5, minAge: 24 },
@@ -41,7 +52,7 @@ const SPIRIT_CONFIGS = {
   malt_whiskey: { name: 'Malt Whiskey', emoji: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', baseAbv: 63.5, minAge: 36 }
 };
 
-const BARREL_CONFIGS = {
+const BARREL_CONFIGS: Record<string, BarrelType> = {
   new_charred: { name: 'New Charred Oak', influence: 1.0, vanillaBoost: 1.2, caramelBoost: 1.3 },
   used_bourbon: { name: 'Used Bourbon Barrel', influence: 0.6, vanillaBoost: 0.8, caramelBoost: 0.9 },
   sherry: { name: 'Sherry Cask', influence: 0.8, fruitBoost: 1.5, sweetBoost: 1.3 },
@@ -90,25 +101,19 @@ function calculateAging(config: BarrelConfig, monthsAged: number): AgingResult {
   const size = BARREL_SIZES[config.barrelSize];
   const spirit = SPIRIT_CONFIGS[config.spiritType];
 
-  // Effective aging considering all factors
   const effectiveAge = monthsAged * warehouse.agingSpeed * size.agingMultiplier * barrel.influence;
   
-  // Calculate color
   let colorStage = COLOR_STAGES[0];
   for (const stage of COLOR_STAGES) {
     if (effectiveAge >= stage.age) colorStage = stage;
   }
 
-  // Angel's share calculation (2-4% per year base)
   const yearsAged = monthsAged / 12;
   const baseAngelShare = 3;
   const angelShare = Math.min(40, yearsAged * baseAngelShare * warehouse.angelShare * size.angelShare);
   
-  // ABV calculation
   const estimatedAbv = Math.max(40, spirit.baseAbv - (yearsAged * 0.5 * warehouse.tempVariation));
 
-  // Flavor profile calculation
-  const ageFactor = Math.min(1, effectiveAge / 120); // Max influence at 10 years
   const flavorProfile = {
     vanilla: Math.min(100, 20 + (effectiveAge * 0.5 * char.vanillaBoost * (barrel.vanillaBoost || 1))),
     caramel: Math.min(100, 15 + (effectiveAge * 0.4 * char.oakInfluence * (barrel.caramelBoost || 1))),
@@ -120,7 +125,6 @@ function calculateAging(config: BarrelConfig, monthsAged: number): AgingResult {
     complexity: Math.min(100, effectiveAge * 0.8)
   };
 
-  // Generate tasting notes based on profile
   const tastingNotes: string[] = [];
   if (flavorProfile.vanilla > 50) tastingNotes.push('rich vanilla');
   if (flavorProfile.caramel > 50) tastingNotes.push('buttery caramel');
@@ -134,9 +138,8 @@ function calculateAging(config: BarrelConfig, monthsAged: number): AgingResult {
   if (config.barrelType === 'sherry') tastingNotes.push('sherry influence');
   if (config.barrelType === 'port') tastingNotes.push('port wine notes');
 
-  // Maturity rating
   const optimalMin = spirit.minAge;
-  const optimalMax = spirit.minAge + 96; // +8 years from minimum
+  const optimalMax = spirit.minAge + 96;
   let maturityRating = 0;
   if (monthsAged < optimalMin) {
     maturityRating = (monthsAged / optimalMin) * 70;
@@ -146,7 +149,6 @@ function calculateAging(config: BarrelConfig, monthsAged: number): AgingResult {
     maturityRating = Math.max(50, 100 - ((monthsAged - optimalMax) / 60) * 30);
   }
 
-  // Warnings
   const warnings: string[] = [];
   if (monthsAged < spirit.minAge) {
     warnings.push(`Not yet legal ${spirit.name} (requires ${spirit.minAge} months)`);
@@ -224,7 +226,6 @@ export default function BarrelAgingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-amber-950/20 to-gray-900">
-      {/* Header */}
       <div className="bg-gradient-to-r from-amber-900/40 via-amber-800/30 to-amber-900/40 border-b border-amber-500/20">
         <div className="max-w-6xl mx-auto px-4 py-8">
           <Link href="/" className="text-amber-400 hover:text-amber-300 mb-4 inline-flex items-center gap-2">
@@ -241,17 +242,15 @@ export default function BarrelAgingPage() {
 
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Configuration Panel */}
           <div className="lg:col-span-1 space-y-6">
             <div className="bg-gray-800/50 rounded-xl p-6 border border-amber-500/10">
               <h2 className="text-xl font-bold text-amber-100 mb-4">⚙️ Barrel Configuration</h2>
               
-              {/* Spirit Type */}
               <div className="mb-4">
                 <label className="text-amber-200/60 text-sm mb-2 block">Spirit Type</label>
                 <select
                   value={config.spiritType}
-                  onChange={(e) => setConfig({ ...config, spiritType: e.target.value as any })}
+                  onChange={(e) => setConfig({ ...config, spiritType: e.target.value as BarrelConfig['spiritType'] })}
                   className="w-full bg-gray-900/50 border border-amber-500/20 rounded-lg px-4 py-2 text-amber-100"
                 >
                   {Object.entries(SPIRIT_CONFIGS).map(([key, val]) => (
@@ -260,12 +259,11 @@ export default function BarrelAgingPage() {
                 </select>
               </div>
 
-              {/* Barrel Type */}
               <div className="mb-4">
                 <label className="text-amber-200/60 text-sm mb-2 block">Barrel Type</label>
                 <select
                   value={config.barrelType}
-                  onChange={(e) => setConfig({ ...config, barrelType: e.target.value as any })}
+                  onChange={(e) => setConfig({ ...config, barrelType: e.target.value as BarrelConfig['barrelType'] })}
                   className="w-full bg-gray-900/50 border border-amber-500/20 rounded-lg px-4 py-2 text-amber-100"
                 >
                   {Object.entries(BARREL_CONFIGS).map(([key, val]) => (
@@ -274,7 +272,6 @@ export default function BarrelAgingPage() {
                 </select>
               </div>
 
-              {/* Char Level */}
               <div className="mb-4">
                 <label className="text-amber-200/60 text-sm mb-2 block">Char Level</label>
                 <div className="grid grid-cols-4 gap-2">
@@ -295,12 +292,11 @@ export default function BarrelAgingPage() {
                 <p className="text-amber-200/40 text-xs mt-1">{CHAR_LEVELS[config.charLevel].name}</p>
               </div>
 
-              {/* Barrel Size */}
               <div className="mb-4">
                 <label className="text-amber-200/60 text-sm mb-2 block">Barrel Size</label>
                 <select
                   value={config.barrelSize}
-                  onChange={(e) => setConfig({ ...config, barrelSize: e.target.value as any })}
+                  onChange={(e) => setConfig({ ...config, barrelSize: e.target.value as BarrelConfig['barrelSize'] })}
                   className="w-full bg-gray-900/50 border border-amber-500/20 rounded-lg px-4 py-2 text-amber-100"
                 >
                   {Object.entries(BARREL_SIZES).map(([key, val]) => (
@@ -309,12 +305,11 @@ export default function BarrelAgingPage() {
                 </select>
               </div>
 
-              {/* Warehouse Position */}
               <div className="mb-4">
                 <label className="text-amber-200/60 text-sm mb-2 block">Warehouse Position</label>
                 <select
                   value={config.warehouse}
-                  onChange={(e) => setConfig({ ...config, warehouse: e.target.value as any })}
+                  onChange={(e) => setConfig({ ...config, warehouse: e.target.value as BarrelConfig['warehouse'] })}
                   className="w-full bg-gray-900/50 border border-amber-500/20 rounded-lg px-4 py-2 text-amber-100"
                 >
                   {Object.entries(WAREHOUSE_POSITIONS).map(([key, val]) => (
@@ -324,7 +319,6 @@ export default function BarrelAgingPage() {
               </div>
             </div>
 
-            {/* Time Control */}
             <div className="bg-gray-800/50 rounded-xl p-6 border border-amber-500/10">
               <h2 className="text-xl font-bold text-amber-100 mb-4">⏱️ Aging Time</h2>
               
@@ -372,11 +366,9 @@ export default function BarrelAgingPage() {
             </div>
           </div>
 
-          {/* Results Panel */}
           <div className="lg:col-span-2 space-y-6">
             {result && (
               <>
-                {/* Visual Barrel */}
                 <div className="bg-gray-800/50 rounded-xl p-6 border border-amber-500/10">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-bold text-amber-100">🥃 Current State</h2>
@@ -397,7 +389,7 @@ export default function BarrelAgingPage() {
                     </div>
                     <div className="text-center p-4 bg-gray-900/30 rounded-lg">
                       <div className="text-2xl font-bold text-red-400">{result.angelShare.toFixed(1)}%</div>
-                      <div className="text-amber-200/50 text-sm">Angel's Share</div>
+                      <div className="text-amber-200/50 text-sm">Angel&apos;s Share</div>
                     </div>
                     <div className="text-center p-4 bg-gray-900/30 rounded-lg">
                       <div className="text-2xl font-bold text-green-400">{Math.round(result.maturityRating)}</div>
@@ -405,7 +397,6 @@ export default function BarrelAgingPage() {
                     </div>
                   </div>
 
-                  {/* Maturity Bar */}
                   <div className="mb-4">
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-amber-200/70">Maturity Progress</span>
@@ -418,7 +409,6 @@ export default function BarrelAgingPage() {
                         className="h-full bg-gradient-to-r from-amber-600 to-amber-400 rounded-full transition-all duration-300"
                         style={{ width: `${result.maturityRating}%` }}
                       />
-                      {/* Optimal range markers */}
                       <div 
                         className="absolute top-0 bottom-0 w-px bg-green-400"
                         style={{ left: `${(result.optimalAge.min / 240) * 100}%` }}
@@ -430,7 +420,6 @@ export default function BarrelAgingPage() {
                     </div>
                   </div>
 
-                  {/* Warnings */}
                   {result.warnings.length > 0 && (
                     <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
                       {result.warnings.map((warning, i) => (
@@ -442,7 +431,6 @@ export default function BarrelAgingPage() {
                   )}
                 </div>
 
-                {/* Flavor Profile */}
                 <div className="bg-gray-800/50 rounded-xl p-6 border border-amber-500/10">
                   <h2 className="text-xl font-bold text-amber-100 mb-4">📊 Flavor Profile</h2>
                   
@@ -462,7 +450,6 @@ export default function BarrelAgingPage() {
                   </div>
                 </div>
 
-                {/* Tasting Notes */}
                 <div className="bg-gray-800/50 rounded-xl p-6 border border-amber-500/10">
                   <h2 className="text-xl font-bold text-amber-100 mb-4">📝 Predicted Tasting Notes</h2>
                   
@@ -481,7 +468,6 @@ export default function BarrelAgingPage() {
                   </div>
                 </div>
 
-                {/* Bottling Recommendation */}
                 <div className={`rounded-xl p-6 border ${
                   result.maturityRating >= 80 
                     ? 'bg-green-900/20 border-green-500/30' 
