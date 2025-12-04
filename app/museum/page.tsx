@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 
-// Museum Wing Types
+// Museum Wing Types - All properly typed
 interface HistoricalFigure {
   name: string
   years: string
@@ -44,12 +44,23 @@ interface MuseumExhibit {
   title: string
   icon: string
   description: string
-  ambiance: string
-  content: React.ReactNode
+}
+
+interface MuseumWing {
+  name: string
+  icon: string
+  tagline: string
+  color: string
+  entranceDescription: string
+  timeline: HistoricalEvent[]
+  pioneers: HistoricalFigure[]
+  bottles: BottleEvolution[]
+  legendary: LegendaryBottle[]
+  exhibits: MuseumExhibit[]
 }
 
 // Complete Museum Data
-const MUSEUM_WINGS = {
+const MUSEUM_WINGS: Record<string, MuseumWing> = {
   bourbon: {
     name: 'Bourbon Heritage Wing',
     icon: '🥃',
