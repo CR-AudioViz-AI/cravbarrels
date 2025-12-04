@@ -1,410 +1,406 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
+import { useState } from 'react'
+import Link from 'next/link'
 
+// Types
 interface UserProfile {
-  id: string;
-  username: string;
-  email: string;
-  avatar_url?: string;
-  total_xp: number;
-  spirits_tried: number;
-  quizzes_completed: number;
-  courses_completed: number;
-  achievements_earned: number;
-  tasting_notes_count: number;
-  favorite_category?: string;
-  streak_days: number;
-  member_since: string;
-  badges: string[];
+  id: string
+  username: string
+  displayName: string
+  avatar: string
+  bio: string
+  location: string
+  joinedDate: string
+  level: number
+  xp: number
+  xpToNextLevel: number
+  rank: string
+  badges: Badge[]
+  stats: UserStats
+  recentActivity: Activity[]
+  topSpirits: Spirit[]
+  achievements: Achievement[]
+  following: number
+  followers: number
+  isPremium: boolean
+}
+
+interface Badge {
+  id: string
+  name: string
+  icon: string
+  description: string
+  earnedDate: string
+  rarity: 'common' | 'rare' | 'epic' | 'legendary'
+}
+
+interface UserStats {
+  spiritsTried: number
+  tastingNotes: number
+  reviewsWritten: number
+  photosShared: number
+  quizzesCompleted: number
+  quizAccuracy: number
+  coursesCompleted: number
+  articlesRead: number
+  daysStreak: number
+  totalPoints: number
+  collectionValue: number
+  wishlistItems: number
+}
+
+interface Activity {
+  id: string
+  type: 'tasting' | 'review' | 'quiz' | 'achievement' | 'photo' | 'course'
+  title: string
+  description: string
+  timestamp: string
+  xpEarned: number
+}
+
+interface Spirit {
+  id: string
+  name: string
+  rating: number
+  image: string
 }
 
 interface Achievement {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  earned_at?: string;
-  progress?: number;
-  max_progress?: number;
+  id: string
+  name: string
+  icon: string
+  progress: number
+  total: number
+  completed: boolean
 }
 
-interface RecentActivity {
-  id: string;
-  type: 'spirit_tried' | 'quiz_completed' | 'course_started' | 'achievement' | 'tasting_note';
-  title: string;
-  description: string;
-  xp_earned: number;
-  timestamp: string;
-}
-
-// Sample data for demo
-const SAMPLE_PROFILE: UserProfile = {
+const sampleUser: UserProfile = {
   id: '1',
-  username: 'WhiskeyExplorer',
-  email: 'demo@barrelverse.com',
-  total_xp: 12450,
-  spirits_tried: 87,
-  quizzes_completed: 23,
-  courses_completed: 5,
-  achievements_earned: 18,
-  tasting_notes_count: 42,
-  favorite_category: 'bourbon',
-  streak_days: 12,
-  member_since: '2024-06-15',
-  badges: ['🥃', '📚', '🏆', '🔥']
-};
+  username: 'whiskey_wanderer',
+  displayName: 'James Mitchell',
+  avatar: '🥃',
+  bio: 'Bourbon enthusiast exploring the world one dram at a time. Collector of rare finds and stories behind every bottle.',
+  location: 'Louisville, KY',
+  joinedDate: '2024-03-15',
+  level: 28,
+  xp: 14250,
+  xpToNextLevel: 15000,
+  rank: 'Master Taster',
+  isPremium: true,
+  following: 156,
+  followers: 892,
+  badges: [
+    { id: '1', name: 'Bourbon Baron', icon: '👑', description: 'Tried 100+ bourbons', earnedDate: '2024-08-20', rarity: 'legendary' },
+    { id: '2', name: 'Kentucky Explorer', icon: '🗺️', description: 'Visited 10 KY distilleries', earnedDate: '2024-07-15', rarity: 'epic' },
+    { id: '3', name: 'Note Master', icon: '📝', description: 'Written 50 tasting notes', earnedDate: '2024-06-10', rarity: 'rare' },
+    { id: '4', name: 'Quiz Whiz', icon: '🧠', description: '90%+ quiz accuracy', earnedDate: '2024-05-22', rarity: 'rare' },
+    { id: '5', name: 'Early Adopter', icon: '🌟', description: 'Joined in first month', earnedDate: '2024-03-15', rarity: 'epic' },
+    { id: '6', name: 'Streak Master', icon: '🔥', description: '30-day activity streak', earnedDate: '2024-09-01', rarity: 'rare' },
+  ],
+  stats: {
+    spiritsTried: 247,
+    tastingNotes: 189,
+    reviewsWritten: 67,
+    photosShared: 94,
+    quizzesCompleted: 156,
+    quizAccuracy: 87,
+    coursesCompleted: 12,
+    articlesRead: 89,
+    daysStreak: 45,
+    totalPoints: 14250,
+    collectionValue: 8750,
+    wishlistItems: 23,
+  },
+  recentActivity: [
+    { id: '1', type: 'tasting', title: 'Tasted Blanton\'s Original', description: 'Added detailed tasting notes', timestamp: '2 hours ago', xpEarned: 50 },
+    { id: '2', type: 'quiz', title: 'Completed Bourbon Basics Quiz', description: 'Scored 95%', timestamp: '5 hours ago', xpEarned: 75 },
+    { id: '3', type: 'achievement', title: 'Unlocked Bourbon Baron', description: 'Reached 100 bourbon tastings', timestamp: '1 day ago', xpEarned: 500 },
+    { id: '4', type: 'photo', title: 'Shared Collection Photo', description: 'Buffalo Trace lineup', timestamp: '2 days ago', xpEarned: 25 },
+    { id: '5', type: 'course', title: 'Completed Barrel Science', description: 'Learned about char levels', timestamp: '3 days ago', xpEarned: 200 },
+  ],
+  topSpirits: [
+    { id: '1', name: 'Pappy Van Winkle 15', rating: 98, image: '🏆' },
+    { id: '2', name: 'George T. Stagg', rating: 96, image: '⭐' },
+    { id: '3', name: 'William Larue Weller', rating: 95, image: '🥇' },
+    { id: '4', name: 'Blantons Gold', rating: 94, image: '🎖️' },
+    { id: '5', name: 'Eagle Rare 17', rating: 93, image: '🦅' },
+  ],
+  achievements: [
+    { id: '1', name: 'Spirit Explorer', icon: '🗺️', progress: 247, total: 500, completed: false },
+    { id: '2', name: 'Note Taker', icon: '📝', progress: 189, total: 200, completed: false },
+    { id: '3', name: 'Quiz Champion', icon: '🏆', progress: 156, total: 150, completed: true },
+    { id: '4', name: 'Social Butterfly', icon: '🦋', progress: 892, total: 1000, completed: false },
+    { id: '5', name: 'Course Graduate', icon: '🎓', progress: 12, total: 20, completed: false },
+  ],
+}
 
-const SAMPLE_ACHIEVEMENTS: Achievement[] = [
-  { id: '1', name: 'First Sip', description: 'Try your first spirit', icon: '🥃', earned_at: '2024-06-15' },
-  { id: '2', name: 'Bourbon Beginner', description: 'Try 10 bourbons', icon: '🌽', earned_at: '2024-07-20', progress: 10, max_progress: 10 },
-  { id: '3', name: 'Quiz Master', description: 'Complete 20 quizzes', icon: '🧠', earned_at: '2024-09-10', progress: 23, max_progress: 20 },
-  { id: '4', name: 'Note Taker', description: 'Write 25 tasting notes', icon: '📝', earned_at: '2024-10-05', progress: 42, max_progress: 25 },
-  { id: '5', name: 'Streak Starter', description: 'Maintain a 7-day streak', icon: '🔥', earned_at: '2024-11-01' },
-  { id: '6', name: 'Scotch Explorer', description: 'Try 25 scotch whiskies', icon: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', progress: 18, max_progress: 25 },
-  { id: '7', name: 'Course Graduate', description: 'Complete 5 courses', icon: '🎓', earned_at: '2024-11-15', progress: 5, max_progress: 5 },
-  { id: '8', name: 'Century Club', description: 'Try 100 spirits', icon: '💯', progress: 87, max_progress: 100 },
-];
+const rarityColors = {
+  common: 'bg-gray-500',
+  rare: 'bg-blue-500',
+  epic: 'bg-purple-500',
+  legendary: 'bg-amber-500',
+}
 
-const SAMPLE_ACTIVITIES: RecentActivity[] = [
-  { id: '1', type: 'spirit_tried', title: 'Tried Buffalo Trace', description: 'Added to your collection', xp_earned: 50, timestamp: '2024-12-03T10:30:00Z' },
-  { id: '2', type: 'tasting_note', title: 'Tasting Note Added', description: 'For Woodford Reserve Double Oaked', xp_earned: 25, timestamp: '2024-12-03T09:15:00Z' },
-  { id: '3', type: 'quiz_completed', title: 'Bourbon Basics Quiz', description: 'Score: 9/10', xp_earned: 100, timestamp: '2024-12-02T20:00:00Z' },
-  { id: '4', type: 'achievement', title: 'Achievement Unlocked!', description: 'Course Graduate 🎓', xp_earned: 500, timestamp: '2024-12-02T18:30:00Z' },
-  { id: '5', type: 'course_started', title: 'Started New Course', description: 'The Art of Scotch Whisky', xp_earned: 10, timestamp: '2024-12-01T14:00:00Z' },
-];
-
-const calculateLevel = (xp: number): { level: number; progress: number; xpToNext: number } => {
-  const baseXP = 1000;
-  const multiplier = 1.5;
-  let level = 1;
-  let totalXPForLevel = baseXP;
-  let accumulatedXP = 0;
-  
-  while (accumulatedXP + totalXPForLevel <= xp) {
-    accumulatedXP += totalXPForLevel;
-    level++;
-    totalXPForLevel = Math.floor(baseXP * Math.pow(multiplier, level - 1));
-  }
-  
-  const xpInCurrentLevel = xp - accumulatedXP;
-  const progress = (xpInCurrentLevel / totalXPForLevel) * 100;
-  
-  return { level, progress, xpToNext: totalXPForLevel - xpInCurrentLevel };
-};
-
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('en-US', { 
-    month: 'short', 
-    day: 'numeric',
-    year: 'numeric'
-  });
-};
-
-const formatRelativeTime = (dateString: string) => {
-  const now = new Date();
-  const date = new Date(dateString);
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-  
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  return `${diffDays}d ago`;
-};
+const activityIcons = {
+  tasting: '🥃',
+  review: '✍️',
+  quiz: '🧠',
+  achievement: '🏆',
+  photo: '📸',
+  course: '📚',
+}
 
 export default function ProfilePage() {
-  const [profile] = useState<UserProfile>(SAMPLE_PROFILE);
-  const [achievements] = useState<Achievement[]>(SAMPLE_ACHIEVEMENTS);
-  const [activities] = useState<RecentActivity[]>(SAMPLE_ACTIVITIES);
-  const [activeTab, setActiveTab] = useState<'overview' | 'achievements' | 'activity' | 'stats'>('overview');
-  
-  const levelInfo = calculateLevel(profile.total_xp);
-
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'spirit_tried': return '🥃';
-      case 'quiz_completed': return '✅';
-      case 'course_started': return '📚';
-      case 'achievement': return '🏆';
-      case 'tasting_note': return '📝';
-      default: return '⭐';
-    }
-  };
+  const [activeTab, setActiveTab] = useState<'overview' | 'activity' | 'badges' | 'achievements'>('overview')
+  const user = sampleUser
+  const xpPercentage = (user.xp / user.xpToNextLevel) * 100
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 via-amber-950/20 to-gray-900">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-amber-900/40 via-amber-800/30 to-amber-900/40 border-b border-amber-500/20">
-        <div className="max-w-6xl mx-auto px-4 py-8">
-          <Link href="/" className="text-amber-400 hover:text-amber-300 mb-4 inline-flex items-center gap-2">
-            ← Back to BarrelVerse
-          </Link>
-          
-          {/* Profile Header */}
-          <div className="flex flex-col md:flex-row items-center md:items-start gap-6 mt-6">
-            {/* Avatar */}
-            <div className="relative">
-              <div className="w-28 h-28 bg-gradient-to-br from-amber-500 to-amber-700 rounded-full flex items-center justify-center text-4xl font-bold text-white shadow-lg">
-                {profile.username[0]}
+    <div className="min-h-screen bg-gradient-to-b from-amber-950 via-stone-900 to-black text-white">
+      <header className="border-b border-amber-900/30 bg-black/50 backdrop-blur-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <Link href="/" className="text-2xl font-bold text-amber-500">🥃 BarrelVerse</Link>
+          <nav className="flex items-center gap-6">
+            <Link href="/spirits" className="hover:text-amber-400 transition-colors">Spirits</Link>
+            <Link href="/collection" className="hover:text-amber-400 transition-colors">Collection</Link>
+            <Link href="/community" className="hover:text-amber-400 transition-colors">Community</Link>
+            <Link href="/journal" className="hover:text-amber-400 transition-colors">Journal</Link>
+          </nav>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        {/* Profile Header */}
+        <div className="bg-gradient-to-r from-amber-900/30 to-stone-800/30 rounded-2xl p-8 mb-8 border border-amber-900/20">
+          <div className="flex flex-col md:flex-row gap-8">
+            <div className="flex flex-col items-center md:items-start">
+              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-amber-600 to-amber-800 flex items-center justify-center text-6xl mb-4 ring-4 ring-amber-500/50">
+                {user.avatar}
               </div>
-              <div className="absolute -bottom-2 -right-2 bg-amber-600 text-white text-sm font-bold px-3 py-1 rounded-full shadow">
-                Lvl {levelInfo.level}
+              {user.isPremium && (
+                <span className="bg-gradient-to-r from-amber-500 to-yellow-500 text-black px-3 py-1 rounded-full text-sm font-bold">
+                  ⭐ PREMIUM
+                </span>
+              )}
+            </div>
+
+            <div className="flex-1">
+              <div className="flex flex-wrap items-center gap-4 mb-2">
+                <h1 className="text-3xl font-bold">{user.displayName}</h1>
+                <span className="text-amber-400">@{user.username}</span>
+                <span className="bg-amber-900/50 px-3 py-1 rounded-full text-sm">{user.rank}</span>
+              </div>
+              <p className="text-gray-300 mb-4 max-w-2xl">{user.bio}</p>
+              <div className="flex flex-wrap gap-6 text-sm text-gray-400 mb-4">
+                <span>📍 {user.location}</span>
+                <span>📅 Joined {new Date(user.joinedDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+                <span className="text-amber-400 font-semibold">{user.following} Following</span>
+                <span className="text-amber-400 font-semibold">{user.followers} Followers</span>
+              </div>
+
+              <div className="bg-black/30 rounded-xl p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-semibold">Level {user.level}</span>
+                  <span className="text-sm text-gray-400">{user.xp.toLocaleString()} / {user.xpToNextLevel.toLocaleString()} XP</span>
+                </div>
+                <div className="h-3 bg-stone-700 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-amber-600 to-amber-400 rounded-full" style={{ width: `${xpPercentage}%` }} />
+                </div>
               </div>
             </div>
-            
-            {/* Info */}
-            <div className="flex-1 text-center md:text-left">
-              <h1 className="text-3xl md:text-4xl font-bold text-amber-100 flex items-center justify-center md:justify-start gap-2">
-                {profile.username}
-                {profile.badges.map((badge, i) => (
-                  <span key={i} className="text-2xl">{badge}</span>
-                ))}
-              </h1>
-              <p className="text-amber-200/60 mt-1">Member since {formatDate(profile.member_since)}</p>
-              
-              {/* XP Bar */}
-              <div className="mt-4 max-w-md">
-                <div className="flex justify-between text-sm text-amber-200/60 mb-1">
-                  <span>{profile.total_xp.toLocaleString()} XP</span>
-                  <span>{levelInfo.xpToNext.toLocaleString()} XP to Level {levelInfo.level + 1}</span>
-                </div>
-                <div className="h-3 bg-gray-700 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-amber-500 to-amber-400 rounded-full transition-all"
-                    style={{ width: `${levelInfo.progress}%` }}
-                  />
-                </div>
-              </div>
-              
-              {/* Quick Stats */}
-              <div className="flex flex-wrap justify-center md:justify-start gap-4 mt-4">
-                <div className="bg-gray-800/50 px-4 py-2 rounded-lg">
-                  <span className="text-amber-400 font-bold">{profile.spirits_tried}</span>
-                  <span className="text-amber-200/60 ml-1">spirits</span>
-                </div>
-                <div className="bg-gray-800/50 px-4 py-2 rounded-lg">
-                  <span className="text-amber-400 font-bold">{profile.tasting_notes_count}</span>
-                  <span className="text-amber-200/60 ml-1">notes</span>
-                </div>
-                <div className="bg-gray-800/50 px-4 py-2 rounded-lg">
-                  <span className="text-amber-400 font-bold">{profile.streak_days}🔥</span>
-                  <span className="text-amber-200/60 ml-1">streak</span>
-                </div>
-              </div>
+
+            <div className="flex flex-col gap-3">
+              <button className="bg-amber-600 hover:bg-amber-500 px-6 py-3 rounded-lg font-semibold transition-colors">✏️ Edit Profile</button>
+              <button className="bg-stone-700 hover:bg-stone-600 px-6 py-3 rounded-lg font-semibold transition-colors">📤 Share Profile</button>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="max-w-6xl mx-auto px-4 py-4">
-        <div className="flex gap-2 border-b border-amber-500/20">
-          {(['overview', 'achievements', 'activity', 'stats'] as const).map(tab => (
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
+          {[
+            { label: 'Spirits Tried', value: user.stats.spiritsTried, icon: '🥃' },
+            { label: 'Tasting Notes', value: user.stats.tastingNotes, icon: '📝' },
+            { label: 'Reviews', value: user.stats.reviewsWritten, icon: '✍️' },
+            { label: 'Quiz Accuracy', value: `${user.stats.quizAccuracy}%`, icon: '🎯' },
+            { label: 'Day Streak', value: user.stats.daysStreak, icon: '🔥' },
+            { label: 'Collection Value', value: `$${user.stats.collectionValue.toLocaleString()}`, icon: '💰' },
+          ].map((stat, i) => (
+            <div key={i} className="bg-stone-800/50 rounded-xl p-4 text-center border border-amber-900/20 hover:border-amber-600/40 transition-colors">
+              <div className="text-2xl mb-1">{stat.icon}</div>
+              <div className="text-2xl font-bold text-amber-400">{stat.value}</div>
+              <div className="text-sm text-gray-400">{stat.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6 border-b border-amber-900/30 pb-4">
+          {(['overview', 'activity', 'badges', 'achievements'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 font-medium capitalize transition-colors ${
-                activeTab === tab 
-                  ? 'text-amber-400 border-b-2 border-amber-400' 
-                  : 'text-amber-200/60 hover:text-amber-200'
+              className={`px-6 py-2 rounded-lg font-semibold transition-colors capitalize ${
+                activeTab === tab ? 'bg-amber-600 text-white' : 'bg-stone-800/50 text-gray-400 hover:text-white hover:bg-stone-700'
               }`}
             >
               {tab}
             </button>
           ))}
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="max-w-6xl mx-auto px-4 py-6">
         {activeTab === 'overview' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Stats Cards */}
-            <div className="lg:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-gray-800/50 rounded-xl p-4 border border-amber-500/10 text-center">
-                <div className="text-3xl mb-1">🥃</div>
-                <div className="text-2xl font-bold text-amber-100">{profile.spirits_tried}</div>
-                <div className="text-amber-200/50 text-sm">Spirits Tried</div>
-              </div>
-              <div className="bg-gray-800/50 rounded-xl p-4 border border-amber-500/10 text-center">
-                <div className="text-3xl mb-1">✅</div>
-                <div className="text-2xl font-bold text-amber-100">{profile.quizzes_completed}</div>
-                <div className="text-amber-200/50 text-sm">Quizzes Done</div>
-              </div>
-              <div className="bg-gray-800/50 rounded-xl p-4 border border-amber-500/10 text-center">
-                <div className="text-3xl mb-1">📚</div>
-                <div className="text-2xl font-bold text-amber-100">{profile.courses_completed}</div>
-                <div className="text-amber-200/50 text-sm">Courses</div>
-              </div>
-              <div className="bg-gray-800/50 rounded-xl p-4 border border-amber-500/10 text-center">
-                <div className="text-3xl mb-1">🏆</div>
-                <div className="text-2xl font-bold text-amber-100">{profile.achievements_earned}</div>
-                <div className="text-amber-200/50 text-sm">Achievements</div>
-              </div>
-            </div>
-            
-            {/* Recent Achievements */}
-            <div className="bg-gray-800/50 rounded-xl p-6 border border-amber-500/10">
-              <h3 className="text-lg font-semibold text-amber-100 mb-4">Recent Achievements</h3>
+          <div className="grid lg:grid-cols-3 gap-8">
+            <div className="bg-stone-800/50 rounded-xl p-6 border border-amber-900/20">
+              <h3 className="text-xl font-bold mb-4">🏆 Top Rated Spirits</h3>
               <div className="space-y-3">
-                {achievements.filter(a => a.earned_at).slice(0, 4).map(achievement => (
-                  <div key={achievement.id} className="flex items-center gap-3">
-                    <span className="text-2xl">{achievement.icon}</span>
-                    <div>
-                      <p className="text-amber-100 font-medium">{achievement.name}</p>
-                      <p className="text-amber-200/50 text-xs">{formatDate(achievement.earned_at!)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <Link href="#" onClick={() => setActiveTab('achievements')} className="text-amber-400 text-sm mt-4 inline-block hover:underline">
-                View all →
-              </Link>
-            </div>
-            
-            {/* Activity Feed */}
-            <div className="lg:col-span-2 bg-gray-800/50 rounded-xl p-6 border border-amber-500/10">
-              <h3 className="text-lg font-semibold text-amber-100 mb-4">Recent Activity</h3>
-              <div className="space-y-4">
-                {activities.slice(0, 5).map(activity => (
-                  <div key={activity.id} className="flex items-start gap-3 pb-3 border-b border-amber-500/10 last:border-0">
-                    <span className="text-xl">{getActivityIcon(activity.type)}</span>
+                {user.topSpirits.map((spirit, i) => (
+                  <div key={spirit.id} className="flex items-center gap-3 p-3 bg-black/30 rounded-lg">
+                    <span className="text-2xl">{spirit.image}</span>
                     <div className="flex-1">
-                      <p className="text-amber-100 font-medium">{activity.title}</p>
-                      <p className="text-amber-200/50 text-sm">{activity.description}</p>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-green-400 text-sm">+{activity.xp_earned} XP</span>
-                      <p className="text-amber-200/40 text-xs">{formatRelativeTime(activity.timestamp)}</p>
+                      <p className="font-semibold">{spirit.name}</p>
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-20 bg-stone-700 rounded-full overflow-hidden">
+                          <div className="h-full bg-amber-500" style={{ width: `${spirit.rating}%` }} />
+                        </div>
+                        <span className="text-sm text-amber-400">{spirit.rating}</span>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-            
-            {/* Favorite Category */}
-            <div className="bg-gradient-to-br from-amber-900/30 to-amber-800/20 rounded-xl p-6 border border-amber-500/20">
-              <h3 className="text-lg font-semibold text-amber-100 mb-4">Your Specialty</h3>
-              <div className="text-center">
-                <div className="text-5xl mb-2">🥃</div>
-                <p className="text-2xl font-bold text-amber-400 capitalize">{profile.favorite_category}</p>
-                <p className="text-amber-200/60 mt-2">You've explored more bourbon than any other category!</p>
+
+            <div className="bg-stone-800/50 rounded-xl p-6 border border-amber-900/20">
+              <h3 className="text-xl font-bold mb-4">📊 Recent Activity</h3>
+              <div className="space-y-3">
+                {user.recentActivity.map((activity) => (
+                  <div key={activity.id} className="p-3 bg-black/30 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <span className="text-xl">{activityIcons[activity.type]}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm truncate">{activity.title}</p>
+                        <p className="text-xs text-gray-500">{activity.timestamp}</p>
+                      </div>
+                      <span className="text-xs text-amber-400">+{activity.xpEarned} XP</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
-        )}
 
-        {activeTab === 'achievements' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {achievements.map(achievement => (
-              <div 
-                key={achievement.id}
-                className={`rounded-xl p-4 border transition-all ${
-                  achievement.earned_at 
-                    ? 'bg-gradient-to-br from-amber-900/30 to-amber-800/20 border-amber-500/30' 
-                    : 'bg-gray-800/30 border-gray-700/30 opacity-60'
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <span className={`text-3xl ${!achievement.earned_at && 'grayscale'}`}>{achievement.icon}</span>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-amber-100">{achievement.name}</h4>
-                    <p className="text-amber-200/60 text-sm">{achievement.description}</p>
-                    {achievement.progress !== undefined && (
-                      <div className="mt-2">
-                        <div className="flex justify-between text-xs text-amber-200/50 mb-1">
-                          <span>{achievement.progress}/{achievement.max_progress}</span>
-                          {achievement.earned_at && <span className="text-green-400">Complete!</span>}
-                        </div>
-                        <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full ${achievement.earned_at ? 'bg-green-500' : 'bg-amber-500'}`}
-                            style={{ width: `${(achievement.progress / (achievement.max_progress || 1)) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
-                    {achievement.earned_at && (
-                      <p className="text-green-400 text-xs mt-2">Earned {formatDate(achievement.earned_at)}</p>
-                    )}
+            <div className="bg-stone-800/50 rounded-xl p-6 border border-amber-900/20">
+              <h3 className="text-xl font-bold mb-4">🎯 Achievement Progress</h3>
+              <div className="space-y-4">
+                {user.achievements.map((achievement) => (
+                  <div key={achievement.id} className="p-3 bg-black/30 rounded-lg">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-xl">{achievement.icon}</span>
+                      <span className="font-semibold flex-1">{achievement.name}</span>
+                      {achievement.completed && <span className="text-green-400">✓</span>}
+                    </div>
+                    <div className="h-2 bg-stone-700 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${achievement.completed ? 'bg-green-500' : 'bg-amber-500'}`} style={{ width: `${Math.min(100, (achievement.progress / achievement.total) * 100)}%` }} />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">{achievement.progress} / {achievement.total}</p>
                   </div>
-                </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
         )}
 
         {activeTab === 'activity' && (
-          <div className="bg-gray-800/50 rounded-xl p-6 border border-amber-500/10">
+          <div className="bg-stone-800/50 rounded-xl p-6 border border-amber-900/20">
+            <h3 className="text-xl font-bold mb-6">Activity Feed</h3>
             <div className="space-y-4">
-              {activities.map(activity => (
-                <div key={activity.id} className="flex items-start gap-4 p-4 bg-gray-900/30 rounded-lg">
-                  <span className="text-2xl">{getActivityIcon(activity.type)}</span>
-                  <div className="flex-1">
-                    <p className="text-amber-100 font-medium">{activity.title}</p>
-                    <p className="text-amber-200/60">{activity.description}</p>
-                    <p className="text-amber-200/40 text-sm mt-1">{formatRelativeTime(activity.timestamp)}</p>
+              {user.recentActivity.map((activity) => (
+                <div key={activity.id} className="flex gap-4 p-4 bg-black/30 rounded-lg">
+                  <div className="w-12 h-12 rounded-full bg-amber-900/50 flex items-center justify-center text-2xl">
+                    {activityIcons[activity.type]}
                   </div>
-                  <span className="text-green-400 font-semibold">+{activity.xp_earned} XP</span>
+                  <div className="flex-1">
+                    <h4 className="font-semibold">{activity.title}</h4>
+                    <p className="text-gray-400 text-sm">{activity.description}</p>
+                    <p className="text-xs text-gray-500 mt-1">{activity.timestamp}</p>
+                  </div>
+                  <span className="bg-amber-900/50 px-3 py-1 rounded-full text-sm text-amber-400 h-fit">+{activity.xpEarned} XP</span>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {activeTab === 'stats' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-gray-800/50 rounded-xl p-6 border border-amber-500/10">
-              <h3 className="text-lg font-semibold text-amber-100 mb-4">Spirits by Category</h3>
-              <div className="space-y-3">
-                {[
-                  { category: 'Bourbon', count: 45, color: 'bg-amber-500' },
-                  { category: 'Scotch', count: 22, color: 'bg-amber-600' },
-                  { category: 'Rye', count: 12, color: 'bg-amber-700' },
-                  { category: 'Irish', count: 5, color: 'bg-green-600' },
-                  { category: 'Japanese', count: 3, color: 'bg-red-500' },
-                ].map(item => (
-                  <div key={item.category}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-amber-200/80">{item.category}</span>
-                      <span className="text-amber-100">{item.count}</span>
+        {activeTab === 'badges' && (
+          <div className="bg-stone-800/50 rounded-xl p-6 border border-amber-900/20">
+            <h3 className="text-xl font-bold mb-6">Badges Collection ({user.badges.length})</h3>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {user.badges.map((badge) => (
+                <div key={badge.id} className="p-4 bg-black/30 rounded-lg border border-amber-900/20">
+                  <div className="flex items-start gap-4">
+                    <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-amber-600 to-amber-800 flex items-center justify-center text-3xl">
+                      {badge.icon}
                     </div>
-                    <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
-                      <div className={`h-full ${item.color} rounded-full`} style={{ width: `${(item.count / 45) * 100}%` }} />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-bold">{badge.name}</h4>
+                        <span className={`w-2 h-2 rounded-full ${rarityColors[badge.rarity]}`} />
+                      </div>
+                      <p className="text-sm text-gray-400">{badge.description}</p>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-            
-            <div className="bg-gray-800/50 rounded-xl p-6 border border-amber-500/10">
-              <h3 className="text-lg font-semibold text-amber-100 mb-4">All-Time Stats</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-4 bg-gray-900/30 rounded-lg">
-                  <p className="text-3xl font-bold text-amber-400">{profile.total_xp.toLocaleString()}</p>
-                  <p className="text-amber-200/50 text-sm">Total XP</p>
                 </div>
-                <div className="text-center p-4 bg-gray-900/30 rounded-lg">
-                  <p className="text-3xl font-bold text-amber-400">{levelInfo.level}</p>
-                  <p className="text-amber-200/50 text-sm">Current Level</p>
-                </div>
-                <div className="text-center p-4 bg-gray-900/30 rounded-lg">
-                  <p className="text-3xl font-bold text-amber-400">{profile.streak_days}</p>
-                  <p className="text-amber-200/50 text-sm">Day Streak</p>
-                </div>
-                <div className="text-center p-4 bg-gray-900/30 rounded-lg">
-                  <p className="text-3xl font-bold text-amber-400">#{42}</p>
-                  <p className="text-amber-200/50 text-sm">Global Rank</p>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         )}
-      </div>
+
+        {activeTab === 'achievements' && (
+          <div className="bg-stone-800/50 rounded-xl p-6 border border-amber-900/20">
+            <h3 className="text-xl font-bold mb-6">Achievements</h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              {user.achievements.map((achievement) => (
+                <div key={achievement.id} className={`p-4 rounded-lg border ${achievement.completed ? 'bg-green-900/20 border-green-600/40' : 'bg-black/30 border-amber-900/20'}`}>
+                  <div className="flex items-center gap-4 mb-3">
+                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-2xl ${achievement.completed ? 'bg-green-600' : 'bg-amber-900/50'}`}>
+                      {achievement.icon}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold">{achievement.name}</h4>
+                      <p className="text-sm text-gray-400">{achievement.progress} / {achievement.total}</p>
+                    </div>
+                    {achievement.completed && <span className="text-green-400 text-2xl">✓</span>}
+                  </div>
+                  <div className="h-2 bg-stone-700 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full ${achievement.completed ? 'bg-green-500' : 'bg-amber-500'}`} style={{ width: `${Math.min(100, (achievement.progress / achievement.total) * 100)}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Quick Actions */}
+        <div className="mt-8 grid md:grid-cols-4 gap-4">
+          <Link href="/journal" className="bg-gradient-to-r from-amber-700 to-amber-600 p-6 rounded-xl text-center hover:from-amber-600 hover:to-amber-500 transition-all">
+            <span className="text-3xl mb-2 block">📝</span>
+            <span className="font-bold">New Tasting Note</span>
+          </Link>
+          <Link href="/collection" className="bg-gradient-to-r from-stone-700 to-stone-600 p-6 rounded-xl text-center hover:from-stone-600 hover:to-stone-500 transition-all">
+            <span className="text-3xl mb-2 block">📦</span>
+            <span className="font-bold">Add to Collection</span>
+          </Link>
+          <Link href="/trivia" className="bg-gradient-to-r from-stone-700 to-stone-600 p-6 rounded-xl text-center hover:from-stone-600 hover:to-stone-500 transition-all">
+            <span className="text-3xl mb-2 block">🧠</span>
+            <span className="font-bold">Take a Quiz</span>
+          </Link>
+          <Link href="/community" className="bg-gradient-to-r from-stone-700 to-stone-600 p-6 rounded-xl text-center hover:from-stone-600 hover:to-stone-500 transition-all">
+            <span className="text-3xl mb-2 block">👥</span>
+            <span className="font-bold">Community</span>
+          </Link>
+        </div>
+      </main>
     </div>
-  );
+  )
 }
