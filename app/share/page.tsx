@@ -16,6 +16,7 @@ import {
   Camera
 } from 'lucide-react';
 
+// Types
 interface CollectionStats {
   totalBottles: number;
   totalValue: number;
@@ -27,35 +28,35 @@ interface CollectionStats {
   achievements: number;
 }
 
-interface ShareCardProps {
-  username: string;
-  avatarUrl?: string;
-  stats: CollectionStats;
-  theme?: 'amber' | 'midnight' | 'vintage';
+interface YearStats {
+  year: number;
+  bottlesAdded: number;
+  bottlesOpened: number;
+  totalTasted: number;
+  favoriteSpirit: string;
+  topDistillery: string;
+  totalSpent: number;
+  rarestFind: string;
+  topRatedBottle: string;
+  mostActiveMonth: string;
+  triviaScore: number;
+  achievements: string[];
 }
 
-const themes = {
-  amber: {
-    bg: 'from-amber-900 via-amber-800 to-stone-900',
-    accent: 'amber-400',
-    text: 'amber-100',
-  },
-  midnight: {
-    bg: 'from-slate-900 via-indigo-900 to-slate-900',
-    accent: 'blue-400',
-    text: 'blue-100',
-  },
-  vintage: {
-    bg: 'from-stone-800 via-amber-950 to-stone-900',
-    accent: 'orange-400',
-    text: 'orange-100',
-  },
-};
-
-export function ShareableCollectionCard({ username, avatarUrl, stats, theme = 'amber' }: ShareCardProps) {
+// Shareable Collection Card Component
+function ShareableCollectionCard({ 
+  username, 
+  avatarUrl, 
+  stats, 
+  theme = 'amber' 
+}: { 
+  username: string; 
+  avatarUrl?: string; 
+  stats: CollectionStats; 
+  theme?: 'amber' | 'midnight' | 'vintage';
+}) {
   const [copied, setCopied] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
-  const themeStyles = themes[theme];
 
   const shareUrl = `https://barrelverse.com/u/${username}`;
   const shareText = `Check out my bourbon collection on BarrelVerse! 🥃 ${stats.totalBottles} bottles, $${stats.totalValue.toLocaleString()} total value. #BarrelVerse #BourbonCollection`;
@@ -80,17 +81,16 @@ export function ShareableCollectionCard({ username, avatarUrl, stats, theme = 'a
     );
   };
 
-  const handleDownload = async () => {
-    // In production, this would use html2canvas or similar
-    alert('Download feature coming soon! Screenshot your card for now.');
-  };
-
   return (
     <div className="space-y-6">
       {/* The Shareable Card */}
       <div
         ref={cardRef}
-        className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${themeStyles.bg} p-8 shadow-2xl`}
+        className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${
+          theme === 'amber' ? 'from-amber-900 via-amber-800 to-stone-900' :
+          theme === 'midnight' ? 'from-slate-900 via-indigo-900 to-slate-900' :
+          'from-stone-800 via-amber-950 to-stone-900'
+        } p-8 shadow-2xl`}
         style={{ width: '400px', height: '600px' }}
       >
         {/* Background Pattern */}
@@ -105,7 +105,7 @@ export function ShareableCollectionCard({ username, avatarUrl, stats, theme = 'a
           <div className="text-center mb-6">
             <div className="inline-flex items-center gap-2 mb-4">
               <span className="text-3xl">🥃</span>
-              <span className={`text-xl font-bold text-${themeStyles.accent}`}>BarrelVerse</span>
+              <span className="text-xl font-bold text-amber-400">BarrelVerse</span>
             </div>
             
             {/* Avatar */}
@@ -118,41 +118,41 @@ export function ShareableCollectionCard({ username, avatarUrl, stats, theme = 'a
             </div>
             
             <h2 className="text-2xl font-bold text-white">{username}</h2>
-            <p className={`text-${themeStyles.text}/70`}>Member since {stats.joinDate}</p>
+            <p className="text-amber-100/70">Member since {stats.joinDate}</p>
           </div>
 
           {/* Stats Grid */}
           <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className={`bg-white/5 rounded-xl p-4 border border-${themeStyles.accent}/20`}>
-              <Wine className={`w-6 h-6 text-${themeStyles.accent} mb-2`} />
+            <div className="bg-white/5 rounded-xl p-4 border border-amber-400/20">
+              <Wine className="w-6 h-6 text-amber-400 mb-2" />
               <p className="text-3xl font-bold text-white">{stats.totalBottles}</p>
-              <p className={`text-sm text-${themeStyles.text}/70`}>Bottles</p>
+              <p className="text-sm text-amber-100/70">Bottles</p>
             </div>
             
-            <div className={`bg-white/5 rounded-xl p-4 border border-${themeStyles.accent}/20`}>
-              <Trophy className={`w-6 h-6 text-${themeStyles.accent} mb-2`} />
+            <div className="bg-white/5 rounded-xl p-4 border border-amber-400/20">
+              <Trophy className="w-6 h-6 text-amber-400 mb-2" />
               <p className="text-3xl font-bold text-white">${stats.totalValue.toLocaleString()}</p>
-              <p className={`text-sm text-${themeStyles.text}/70`}>Collection Value</p>
+              <p className="text-sm text-amber-100/70">Collection Value</p>
             </div>
             
-            <div className={`bg-white/5 rounded-xl p-4 border border-${themeStyles.accent}/20`}>
-              <Star className={`w-6 h-6 text-${themeStyles.accent} mb-2`} />
+            <div className="bg-white/5 rounded-xl p-4 border border-amber-400/20">
+              <Star className="w-6 h-6 text-amber-400 mb-2" />
               <p className="text-3xl font-bold text-white">{stats.rareBottles}</p>
-              <p className={`text-sm text-${themeStyles.text}/70`}>Rare Bottles</p>
+              <p className="text-sm text-amber-100/70">Rare Bottles</p>
             </div>
             
-            <div className={`bg-white/5 rounded-xl p-4 border border-${themeStyles.accent}/20`}>
-              <Flame className={`w-6 h-6 text-${themeStyles.accent} mb-2`} />
+            <div className="bg-white/5 rounded-xl p-4 border border-amber-400/20">
+              <Flame className="w-6 h-6 text-amber-400 mb-2" />
               <p className="text-3xl font-bold text-white">{stats.achievements}</p>
-              <p className={`text-sm text-${themeStyles.text}/70`}>Achievements</p>
+              <p className="text-sm text-amber-100/70">Achievements</p>
             </div>
           </div>
 
           {/* Favorite Info */}
-          <div className={`bg-white/5 rounded-xl p-4 border border-${themeStyles.accent}/20 mb-6`}>
-            <p className={`text-sm text-${themeStyles.text}/70 mb-1`}>Favorite Category</p>
+          <div className="bg-white/5 rounded-xl p-4 border border-amber-400/20 mb-6">
+            <p className="text-sm text-amber-100/70 mb-1">Favorite Category</p>
             <p className="text-lg font-bold text-white capitalize">{stats.topCategory}</p>
-            <p className={`text-sm text-${themeStyles.text}/70 mt-2 mb-1`}>Top Distillery</p>
+            <p className="text-sm text-amber-100/70 mt-2 mb-1">Top Distillery</p>
             <p className="text-lg font-bold text-white">{stats.favoriteDistillery}</p>
           </div>
 
@@ -164,19 +164,19 @@ export function ShareableCollectionCard({ username, avatarUrl, stats, theme = 'a
                   key={star}
                   className={`w-6 h-6 ${
                     star <= Math.round(stats.avgRating)
-                      ? `text-${themeStyles.accent} fill-${themeStyles.accent}`
+                      ? 'text-amber-400 fill-amber-400'
                       : 'text-white/20'
                   }`}
                 />
               ))}
             </div>
-            <p className={`text-center text-${themeStyles.text}/70`}>
+            <p className="text-center text-amber-100/70">
               Average Rating: {stats.avgRating.toFixed(1)}
             </p>
           </div>
 
           {/* Watermark */}
-          <p className={`text-center text-${themeStyles.text}/40 text-xs mt-4`}>
+          <p className="text-center text-amber-100/40 text-xs mt-4">
             barrelverse.com • Your Story. Our Design.
           </p>
         </div>
@@ -217,7 +217,6 @@ export function ShareableCollectionCard({ username, avatarUrl, stats, theme = 'a
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={handleDownload}
           className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg font-medium hover:bg-amber-500 transition-colors"
         >
           <Download className="w-4 h-4" />
@@ -228,27 +227,11 @@ export function ShareableCollectionCard({ username, avatarUrl, stats, theme = 'a
   );
 }
 
-// Year in Review / "Bourbon Wrapped" Component
-interface YearStats {
-  year: number;
-  bottlesAdded: number;
-  bottlesOpened: number;
-  totalTasted: number;
-  favoriteSpirit: string;
-  topDistillery: string;
-  totalSpent: number;
-  rarestFind: string;
-  topRatedBottle: string;
-  mostActiveMonth: string;
-  triviaScore: number;
-  achievements: string[];
-}
-
-export function BourbonWrapped({ username, stats }: { username: string; stats: YearStats }) {
+// Bourbon Wrapped Component
+function BourbonWrapped({ username, stats }: { username: string; stats: YearStats }) {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const slides = [
-    // Slide 1: Intro
     {
       content: (
         <div className="text-center">
@@ -268,7 +251,6 @@ export function BourbonWrapped({ username, stats }: { username: string; stats: Y
         </div>
       ),
     },
-    // Slide 2: Bottles
     {
       content: (
         <div className="text-center">
@@ -287,7 +269,6 @@ export function BourbonWrapped({ username, stats }: { username: string; stats: Y
         </div>
       ),
     },
-    // Slide 3: Top Spirit
     {
       content: (
         <div className="text-center">
@@ -305,7 +286,6 @@ export function BourbonWrapped({ username, stats }: { username: string; stats: Y
         </div>
       ),
     },
-    // Slide 4: Rarest Find
     {
       content: (
         <div className="text-center">
@@ -321,7 +301,6 @@ export function BourbonWrapped({ username, stats }: { username: string; stats: Y
         </div>
       ),
     },
-    // Slide 5: Stats
     {
       content: (
         <div className="text-center">
@@ -347,7 +326,6 @@ export function BourbonWrapped({ username, stats }: { username: string; stats: Y
         </div>
       ),
     },
-    // Slide 6: Share
     {
       content: (
         <div className="text-center">
@@ -371,56 +349,51 @@ export function BourbonWrapped({ username, stats }: { username: string; stats: Y
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-900 via-stone-900 to-black flex items-center justify-center p-8">
-      <div className="max-w-lg w-full">
-        {/* Slide Content */}
-        <motion.div
-          key={currentSlide}
-          initial={{ opacity: 0, x: 100 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -100 }}
-          className="bg-stone-800/50 rounded-3xl border border-amber-500/30 p-12 min-h-[500px] flex items-center justify-center"
+    <div className="flex flex-col items-center">
+      <motion.div
+        key={currentSlide}
+        initial={{ opacity: 0, x: 100 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -100 }}
+        className="bg-stone-800/50 rounded-3xl border border-amber-500/30 p-12 min-h-[500px] flex items-center justify-center max-w-lg w-full"
+      >
+        {slides[currentSlide].content}
+      </motion.div>
+
+      <div className="flex items-center justify-between mt-8 w-full max-w-lg">
+        <button
+          onClick={() => setCurrentSlide(Math.max(0, currentSlide - 1))}
+          disabled={currentSlide === 0}
+          className="px-6 py-2 text-amber-400 disabled:opacity-30"
         >
-          {slides[currentSlide].content}
-        </motion.div>
+          Previous
+        </button>
 
-        {/* Navigation */}
-        <div className="flex items-center justify-between mt-8">
-          <button
-            onClick={() => setCurrentSlide(Math.max(0, currentSlide - 1))}
-            disabled={currentSlide === 0}
-            className="px-6 py-2 text-amber-400 disabled:opacity-30"
-          >
-            Previous
-          </button>
-
-          {/* Dots */}
-          <div className="flex gap-2">
-            {slides.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentSlide(index)}
-                className={`w-2 h-2 rounded-full transition-all ${
-                  index === currentSlide ? 'bg-amber-400 w-6' : 'bg-stone-600'
-                }`}
-              />
-            ))}
-          </div>
-
-          <button
-            onClick={() => setCurrentSlide(Math.min(slides.length - 1, currentSlide + 1))}
-            disabled={currentSlide === slides.length - 1}
-            className="px-6 py-2 text-amber-400 disabled:opacity-30"
-          >
-            Next
-          </button>
+        <div className="flex gap-2">
+          {slides.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentSlide(index)}
+              className={`w-2 h-2 rounded-full transition-all ${
+                index === currentSlide ? 'bg-amber-400 w-6' : 'bg-stone-600'
+              }`}
+            />
+          ))}
         </div>
+
+        <button
+          onClick={() => setCurrentSlide(Math.min(slides.length - 1, currentSlide + 1))}
+          disabled={currentSlide === slides.length - 1}
+          className="px-6 py-2 text-amber-400 disabled:opacity-30"
+        >
+          Next
+        </button>
       </div>
     </div>
   );
 }
 
-// Export default page component
+// Main Page Component - ONLY default export
 export default function SharePage() {
   const mockStats: CollectionStats = {
     totalBottles: 47,
