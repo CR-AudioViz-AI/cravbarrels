@@ -3,8 +3,46 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
+// TypeScript interfaces for proper type safety
+interface TastingSpirit {
+  name: string
+  proof: number
+  notes: string
+}
+
+interface TourStop {
+  id: string
+  name: string
+  position: number
+  image: string
+  ambience: string
+  description: string
+  facts: string[]
+  audio: string
+  duration: string
+  tasting?: TastingSpirit[]
+}
+
+interface DistilleryStats {
+  barrels: string
+  brands: string
+  awards: string
+  tours: string
+}
+
+interface Distillery {
+  name: string
+  location: string
+  founded: number
+  slogan: string
+  description: string
+  stats: DistilleryStats
+  tourStops: TourStop[]
+  famousBrands: string[]
+}
+
 // Distillery data with virtual tour stops
-const DISTILLERIES = {
+const DISTILLERIES: Record<string, Distillery> = {
   'buffalo-trace': {
     name: 'Buffalo Trace Distillery',
     location: 'Frankfort, Kentucky',
