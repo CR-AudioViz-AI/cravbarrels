@@ -1,13 +1,27 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "github": {
-    "autoAlias": false
-  },
   "crons": [
     {
-      "path": "/api/cron/massive-expansion", 
+      "path": "/api/cron/content-generation",
       "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/massive-expansion",
+      "schedule": "0 2 * * *"
     }
   ],
-  "buildCommand": "next build"
+  "headers": [
+    {
+      "source": "/manifest.json",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/sw.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" },
+        { "key": "Service-Worker-Allowed", "value": "/" }
+      ]
+    }
+  ]
 }
