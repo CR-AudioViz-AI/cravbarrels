@@ -104,7 +104,7 @@ const MUSEUM_WINGS: Record<string, MuseumWing> = {
       { name: 'Old Fitzgerald Stitzel-Weller', distillery: 'Stitzel-Weller', year: '1950s', value: '$2,000-$8,000', story: 'The original wheated bourbon from the legendary Stitzel-Weller distillery, closed in 1992.', rarity: 'legendary' as const, lastSeen: 'Private collections' },
       { name: 'A.H. Hirsch 16 Year', distillery: 'Michter\'s', year: 'Distilled 1974', value: '$1,500-$5,000', story: 'Distilled at Michter\'s before it closed, accidentally aged 16 years when the owner died.', rarity: 'legendary' as const, lastSeen: 'Extremely rare at auction' },
       { name: 'George T. Stagg (Early Releases)', distillery: 'Buffalo Trace', year: '2002-2005', value: '$1,000-$3,000', story: 'The first releases of the annual Antique Collection before the bourbon boom.', rarity: 'legendary' as const },
-      { name: 'Double Eagle Very Rare', distillery: 'Buffalo Trace', year: 'First release 2019', value: '$2,000-$4,000', story: '20-year aged bourbon in a crystal decanter with silver eagle stopper. Limited to 199 bottles.', rarity: 'mythical' as const }
+      { name: 'Double Eagle Very Rare', distillery: 'Buffalo Trace', year: 'First release 2019', value: '$2,000-$4,000', story: '20-year aged bourbon in a crystal decanter with silver eagle stopper. Limited to 199 bottles.', rarity: 'legendary' as const }
     ],
     
     exhibits: [
@@ -408,7 +408,7 @@ const MUSEUM_WINGS: Record<string, MuseumWing> = {
     ],
     
     bottles: [
-      { era: 'Imperial Russia', year: '1700-1917', description: 'Crystal decanters for nobility, earthenware for masses', changes: ['Class distinction', 'Ornate etching', 'Noble crests'], rarity: 'mythical' as const },
+      { era: 'Imperial Russia', year: '1700-1917', description: 'Crystal decanters for nobility, earthenware for masses', changes: ['Class distinction', 'Ornate etching', 'Noble crests'], rarity: 'legendary' as const },
       { era: 'Soviet Era', year: '1917-1991', description: 'Utilitarian state-produced bottles', changes: ['Standardized design', 'Minimal branding', 'Mass production'], rarity: 'rare' as const },
       { era: 'Western Introduction', year: '1933-1980', description: 'Clear bottles emphasizing purity', changes: ['Simple labels', 'Quality claims', 'Mixability focus'], rarity: 'rare' as const },
       { era: 'Marketing Era', year: '1981-2000', description: 'Absolut iconic shape, creative advertising', changes: ['Distinctive silhouettes', 'Art collaborations', 'Limited editions'], rarity: 'common' as const },
