@@ -447,7 +447,7 @@ async function executeAnalysis(params: any): Promise<TaskResult> {
 
         result = {
           metrics_count: metrics?.length || 0,
-          types: [...new Set(metrics?.map(m => m.metric_type) || [])],
+          types: Array.from(new Set(metrics?.map(m => m.metric_type) || [])),
           analyzed_at: new Date().toISOString()
         }
         break
