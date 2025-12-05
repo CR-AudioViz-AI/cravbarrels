@@ -310,11 +310,22 @@ async function executeInvestigation(params: any): Promise<TaskResult> {
     }
 
     // Update the original ticket with analysis
+    // First get the current ticket
+    const { data: currentTicket } = await supabase
+      .from('bv_auto_tickets')
+      .select('error_details')
+      .eq('id', ticket_id)
+      .single()
+    
+    // Merge the analysis into existing error_details
+    const updatedDetails = {
+      ...(currentTicket?.error_details || {}),
+      analysis
+    }
+    
     await supabase
       .from('bv_auto_tickets')
-      .update({
-        error_details: supabase.sql`error_details || ${JSON.stringify({ analysis })}`
-      })
+      .update({ error_details: updatedDetails })
       .eq('id', ticket_id)
 
     return {
