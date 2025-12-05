@@ -305,7 +305,7 @@ async function executeInvestigation(params: any): Promise<TaskResult> {
       ticket_id,
       error_pattern: error_message,
       similar_tickets: similarTickets?.length || 0,
-      suggested_action: determineSuggestedAction(error_message, similarTickets),
+      suggested_action: determineSuggestedAction(error_message, similarTickets || []),
       analyzed_at: new Date().toISOString()
     }
 
