@@ -12,11 +12,16 @@
  * - notification: Send scheduled notifications
  * 
  * CR AudioViz AI, LLC - BarrelVerse
- * Timestamp: 2025-12-05
+ * Timestamp: 2025-12-06
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+
+// Define types
+interface QueueStatusItem {
+  status: string;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const supabase: any = createClient(
@@ -53,8 +58,8 @@ export async function GET(request: NextRequest) {
 
     const stats = {
       total: count || 0,
-      queued: queueStats?.filter(t => t.status === 'queued').length || 0,
-      processing: queueStats?.filter(t => t.status === 'processing').length || 0
+      queued: (queueStats as QueueStatusItem[] | null)?.filter((t: QueueStatusItem) => t.status === 'queued').length || 0,
+      processing: (queueStats as QueueStatusItem[] | null)?.filter((t: QueueStatusItem) => t.status === 'processing').length || 0
     }
 
     return NextResponse.json({
@@ -115,7 +120,7 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json()
     const { id, status, result, error_message } = body
 
-    const updates: Record<string, any> = {}
+    const updates: Record<string, unknown> = {}
     
     if (status) {
       updates.status = status
