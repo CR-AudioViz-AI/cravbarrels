@@ -1,6 +1,5 @@
 // app/api/cron/auto-sync/route.ts
 // AUTOMATED DATA SYNCHRONIZATION FROM FREE APIS
-// Designed to run via Vercel Cron or manual trigger
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
@@ -10,11 +9,9 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Verify cron secret or allow manual trigger
 function verifyCron(request: NextRequest): boolean {
   const authHeader = request.headers.get("authorization");
   if (authHeader === `Bearer ${process.env.CRON_SECRET}`) return true;
-  // Allow manual trigger in development
   const url = new URL(request.url);
   return url.searchParams.get("manual") === "true";
 }
@@ -28,13 +25,12 @@ export async function GET(request: NextRequest) {
     timestamp: new Date().toISOString(),
     cocktails: { synced: 0, errors: [] as string[] },
     breweries: { synced: 0, errors: [] as string[] },
-    trivia: { generated: 0, errors: [] as string[] },
   };
 
   try {
     // 1. SYNC COCKTAILS FROM COCKTAILDB
     console.log("Syncing cocktails...");
-    const cocktailLetters = ["a", "b", "c", "d", "m", "w"];
+    const cocktailLetters = ["a", "b", "c", "m", "w"];
     for (const letter of cocktailLetters) {
       try {
         const res = await fetch(
@@ -60,8 +56,9 @@ export async function GET(request: NextRequest) {
             .upsert(cocktails, { onConflict: "name", ignoreDuplicates: true })
             .select();
 
-          if (error) throw error;
-          results.cocktails.synced += inserted?.length || 0;
+          if (!error) {
+            results.cocktails.synced += inserted?.length || 0;
+          }
         }
       } catch (e: any) {
         results.cocktails.errors.push(`Letter ${letter}: ${e.message}`);
@@ -70,7 +67,7 @@ export async function GET(request: NextRequest) {
 
     // 2. SYNC BREWERIES FROM OPEN BREWERY DB
     console.log("Syncing breweries...");
-    const states = ["california", "new_york", "texas", "colorado", "oregon", "washington", "florida"];
+    const states = ["california", "new_york", "texas", "colorado", "oregon"];
     for (const state of states) {
       try {
         const res = await fetch(
@@ -83,7 +80,7 @@ export async function GET(request: NextRequest) {
           const transformed = breweries.map((b: any) => ({
             name: b.name,
             type: "brewery",
-            region: b.state || b.state_province || state,
+            region: b.state || state,
             country: b.country || "United States",
             city: b.city,
             address: [b.address_1, b.address_2].filter(Boolean).join(", "),
@@ -99,22 +96,25 @@ export async function GET(request: NextRequest) {
             .upsert(transformed, { onConflict: "name", ignoreDuplicates: true })
             .select();
 
-          if (error) throw error;
-          results.breweries.synced += inserted?.length || 0;
+          if (!error) {
+            results.breweries.synced += inserted?.length || 0;
+          }
         }
       } catch (e: any) {
         results.breweries.errors.push(`State ${state}: ${e.message}`);
       }
     }
 
-    // 3. Log sync result
-    await supabase.from("bv_sync_logs").insert({
-      sync_type: "auto_sync",
-      results: JSON.stringify(results),
-      status: "completed",
-    }).catch(() => {
+    // 3. Log sync result (wrap in try-catch)
+    try {
+      await supabase.from("bv_sync_logs").insert({
+        sync_type: "auto_sync",
+        results: JSON.stringify(results),
+        status: "completed",
+      });
+    } catch {
       // Table may not exist, ignore
-    });
+    }
 
     return NextResponse.json({
       success: true,
@@ -130,7 +130,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Helper to detect base spirit from cocktail ingredients
 function detectBaseSpirit(cocktail: any): string {
   const ingredients = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     .map((i) => cocktail[`strIngredient${i}`]?.toLowerCase() || "")
@@ -143,8 +142,6 @@ function detectBaseSpirit(cocktail: any): string {
     tequila: ["tequila", "mezcal"],
     whiskey: ["whiskey", "whisky", "bourbon", "rye", "scotch"],
     brandy: ["brandy", "cognac", "armagnac"],
-    vermouth: ["vermouth"],
-    liqueur: ["liqueur", "amaretto", "kahlua", "baileys"],
   };
 
   for (const [spirit, keywords] of Object.entries(spiritMap)) {
