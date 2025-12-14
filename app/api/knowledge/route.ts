@@ -1,5 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
-import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from "@supabase/supabase-js";
+import { NextRequest, NextResponse } from "next/server";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,26 +9,26 @@ const supabase = createClient(
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const category = searchParams.get('category');
-    const search = searchParams.get('search');
-    const featured = searchParams.get('featured');
-    const articleId = searchParams.get('id');
+    const category = searchParams.get("category");
+    const search = searchParams.get("search");
+    const featured = searchParams.get("featured");
+    const articleId = searchParams.get("id");
 
     // Get single article
     if (articleId) {
       const { data, error } = await supabase
-        .from('bv_knowledge_base')
-        .select('*')
-        .eq('id', articleId)
+        .from("bv_knowledge_base")
+        .select("*")
+        .eq("id", articleId)
         .single();
 
       if (error) throw error;
 
       // Increment view count
       await supabase
-        .from('bv_knowledge_base')
+        .from("bv_knowledge_base")
         .update({ view_count: (data.view_count || 0) + 1 })
-        .eq('id', articleId);
+        .eq("id", articleId);
 
       return NextResponse.json({
         success: true,
@@ -38,16 +38,16 @@ export async function GET(request: NextRequest) {
 
     // List articles
     let query = supabase
-      .from('bv_knowledge_base')
-      .select('*')
-      .order('view_count', { ascending: false });
+      .from("bv_knowledge_base")
+      .select("*")
+      .order("view_count", { ascending: false });
 
-    if (category && category !== 'all') {
-      query = query.eq('category', category);
+    if (category && category !== "all") {
+      query = query.eq("category", category);
     }
 
-    if (featured === 'true') {
-      query = query.eq('is_featured', true);
+    if (featured === "true") {
+      query = query.eq("is_featured", true);
     }
 
     if (search) {
@@ -60,11 +60,13 @@ export async function GET(request: NextRequest) {
 
     // Get categories
     const { data: categories } = await supabase
-      .from('bv_knowledge_base')
-      .select('category')
-      .order('category');
+      .from("bv_knowledge_base")
+      .select("category")
+      .order("category");
 
-    const uniqueCategories = [...new Set(categories?.map(c => c.category) || [])];
+    // FIX: Use Array.from instead of spread operator with Set
+    const categoryArray = categories?.map(c => c.category).filter(Boolean) || [];
+    const uniqueCategories = Array.from(new Set(categoryArray));
 
     return NextResponse.json({
       success: true,
@@ -73,9 +75,9 @@ export async function GET(request: NextRequest) {
       categories: uniqueCategories
     });
   } catch (error) {
-    console.error('Knowledge API error:', error);
+    console.error("Knowledge API error:", error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch articles' },
+      { success: false, error: "Failed to fetch articles" },
       { status: 500 }
     );
   }
@@ -88,47 +90,47 @@ export async function POST(request: NextRequest) {
 
     if (!articleId) {
       return NextResponse.json(
-        { success: false, error: 'Article ID required' },
+        { success: false, error: "Article ID required" },
         { status: 400 }
       );
     }
 
-    if (action === 'helpful') {
+    if (action === "helpful") {
       const { data, error } = await supabase
-        .from('bv_knowledge_base')
-        .select('helpful_count')
-        .eq('id', articleId)
+        .from("bv_knowledge_base")
+        .select("helpful_count")
+        .eq("id", articleId)
         .single();
 
       if (error) throw error;
 
       await supabase
-        .from('bv_knowledge_base')
+        .from("bv_knowledge_base")
         .update({ helpful_count: (data.helpful_count || 0) + 1 })
-        .eq('id', articleId);
+        .eq("id", articleId);
 
       return NextResponse.json({
         success: true,
-        message: 'Marked as helpful'
+        message: "Marked as helpful"
       });
     }
 
-    if (action === 'bookmark' && userId) {
+    if (action === "bookmark" && userId) {
       // Would need a bookmarks table
       return NextResponse.json({
         success: true,
-        message: 'Bookmarked'
+        message: "Bookmarked"
       });
     }
 
     return NextResponse.json(
-      { success: false, error: 'Invalid action' },
+      { success: false, error: "Invalid action" },
       { status: 400 }
     );
   } catch (error) {
-    console.error('Knowledge action error:', error);
+    console.error("Knowledge action error:", error);
     return NextResponse.json(
-      { success: false, error: 'Failed to process action' },
+      { success: false, error: "Failed to process action" },
       { status: 500 }
     );
   }
