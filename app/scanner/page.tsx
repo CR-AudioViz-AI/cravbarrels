@@ -69,7 +69,7 @@ export default function ScannerPage() {
     
     try {
       await codeReader.current.decodeFromVideoDevice(
-        undefined,
+        null,
         videoRef.current,
         async (result, error) => {
           if (result) {
@@ -502,3 +502,4 @@ export default function ScannerPage() {
     </div>
   )
 }
+
