@@ -30,12 +30,19 @@ interface GameState {
   answers: { correct: boolean; question: string }[];
 }
 
+interface TriviaGameProps {
+  category?: string;
+  questionCount?: number;
+}
+
 const DIFFICULTY_POINTS = { easy: 10, medium: 20, hard: 30 };
 const STREAK_BONUS = [0, 0, 5, 10, 15, 25, 40, 60, 80, 100];
 const TIME_PER_QUESTION = 30;
-const QUESTIONS_PER_GAME = 10;
 
-export default function TriviaGame() {
+export default function TriviaGame({ 
+  category: initialCategory = 'all', 
+  questionCount = 10 
+}: TriviaGameProps) {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [shuffledAnswers, setShuffledAnswers] = useState<string[]>([]);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
@@ -48,11 +55,12 @@ export default function TriviaGame() {
     timeLeft: TIME_PER_QUESTION,
     answers: []
   });
-  const [category, setCategory] = useState<string>('all');
+  const [category, setCategory] = useState<string>(initialCategory);
   const [difficulty, setDifficulty] = useState<string>('all');
   const [loading, setLoading] = useState(false);
   const [highScores, setHighScores] = useState<number[]>([]);
   
+  const questionsPerGame = questionCount;
   const supabase = createClient();
 
   // Load questions
@@ -79,14 +87,14 @@ export default function TriviaGame() {
       // Shuffle and take required number
       const shuffled = (data || [])
         .sort(() => Math.random() - 0.5)
-        .slice(0, QUESTIONS_PER_GAME);
+        .slice(0, questionsPerGame);
       
       setQuestions(shuffled);
     } catch (error) {
       console.error('Error loading questions:', error);
     }
     setLoading(false);
-  }, [category, difficulty, supabase]);
+  }, [category, difficulty, supabase, questionsPerGame]);
 
   // Shuffle answers when question changes
   useEffect(() => {
@@ -114,6 +122,7 @@ export default function TriviaGame() {
     }, 1000);
     
     return () => clearInterval(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState.status, gameState.timeLeft]);
 
   const startGame = async () => {
@@ -263,7 +272,7 @@ export default function TriviaGame() {
           <div className="text-center">
             <p className="text-amber-400 text-xs uppercase">Question</p>
             <p className="text-lg font-bold text-white">
-              {gameState.currentQuestion + 1}/{questions.length || QUESTIONS_PER_GAME}
+              {gameState.currentQuestion + 1}/{questions.length || questionsPerGame}
             </p>
           </div>
         </div>
@@ -273,7 +282,7 @@ export default function TriviaGame() {
           <motion.div 
             className="h-full bg-gradient-to-r from-amber-500 to-orange-500"
             initial={{ width: 0 }}
-            animate={{ width: `${((gameState.currentQuestion) / QUESTIONS_PER_GAME) * 100}%` }}
+            animate={{ width: `${((gameState.currentQuestion) / questionsPerGame) * 100}%` }}
           />
         </div>
       </div>
