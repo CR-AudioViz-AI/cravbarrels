@@ -22,9 +22,9 @@ interface Spirit {
 // FIXED: Generic spirit images that don't show branded products
 // Using images that show glasses, barrels, or generic bottles - NOT specific brands
 const SPIRIT_IMAGES: Record<string, string> = {
-  bourbon: 'https://images.unsplash.com/photo-1598018553943-93a4a78f1e08?w=400&h=600&fit=crop',
+  bourbon: 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=400&h=600&fit=crop',
   scotch: 'https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=400&h=600&fit=crop',
-  whiskey: 'https://images.unsplash.com/photo-1598018553943-93a4a78f1e08?w=400&h=600&fit=crop',
+  whiskey: 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=400&h=600&fit=crop',
   wine: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400&h=600&fit=crop',
   beer: 'https://images.unsplash.com/photo-1535958636474-b021ee887b13?w=400&h=600&fit=crop',
   rum: 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=400&h=600&fit=crop',
@@ -35,12 +35,12 @@ const SPIRIT_IMAGES: Record<string, string> = {
   brandy: 'https://images.unsplash.com/photo-1619451334792-150fd785ee74?w=400&h=600&fit=crop',
   mezcal: 'https://images.unsplash.com/photo-1546171753-97d7676e4602?w=400&h=600&fit=crop',
   sake: 'https://images.unsplash.com/photo-1553361371-9b22f78e8b1d?w=400&h=600&fit=crop',
-  rye: 'https://images.unsplash.com/photo-1598018553943-93a4a78f1e08?w=400&h=600&fit=crop',
+  rye: 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=400&h=600&fit=crop',
   irish: 'https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=400&h=600&fit=crop',
   japanese: 'https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=400&h=600&fit=crop',
   liqueur: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=400&h=600&fit=crop',
   other: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=400&h=600&fit=crop',
-  default: 'https://images.unsplash.com/photo-1598018553943-93a4a78f1e08?w=400&h=600&fit=crop'
+  default: 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=400&h=600&fit=crop'
 }
 
 // Fallback featured spirits with real data
