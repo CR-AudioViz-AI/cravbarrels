@@ -166,12 +166,12 @@ export async function GET(request: NextRequest) {
   try {
     // Get total count
     const { count: totalCount } = await supabase
-      .from('spirits')
+      .from('bv_spirits')
       .select('*', { count: 'exact', head: true });
     
     // Get spirits with real images (not placeholders)
     const { data: withImages } = await supabase
-      .from('spirits')
+      .from('bv_spirits')
       .select('id')
       .not('image_url', 'is', null)
       .not('image_url', 'ilike', '%placeholder%')
@@ -182,7 +182,7 @@ export async function GET(request: NextRequest) {
     
     // Get category breakdown
     const { data: categories } = await supabase
-      .from('spirits')
+      .from('bv_spirits')
       .select('category')
       .not('category', 'is', null);
     
@@ -194,7 +194,7 @@ export async function GET(request: NextRequest) {
     
     // Get image source breakdown
     const { data: sourcesData } = await supabase
-      .from('spirits')
+      .from('bv_spirits')
       .select('image_source')
       .not('image_source', 'is', null);
     
@@ -270,7 +270,7 @@ export async function POST(request: NextRequest) {
     
     // Build query
     let query = supabase
-      .from('spirits')
+      .from('bv_spirits')
       .select('id, name, brand, category, image_url, upc')
       .order('id', { ascending: true })
       .limit(batchLimit);
@@ -363,7 +363,7 @@ export async function POST(request: NextRequest) {
         // Update database
         if (!dryRun) {
           const { error: updateError } = await supabase
-            .from('spirits')
+            .from('bv_spirits')
             .update({
               image_url: image.url,
               image_source: image.source,
@@ -413,7 +413,7 @@ export async function POST(request: NextRequest) {
     
     // Get remaining count
     let remainingQuery = supabase
-      .from('spirits')
+      .from('bv_spirits')
       .select('*', { count: 'exact', head: true })
       .gt('id', lastSpirit.id);
     
