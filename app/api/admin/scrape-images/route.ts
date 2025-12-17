@@ -429,7 +429,7 @@ export async function POST(request: NextRequest) {
     
     // Get spirit details
     const { data: spirit, error: fetchError } = await supabase
-      .from('spirits')
+      .from('bv_spirits')
       .select('id, name, brand, category, image_url, upc')
       .eq('id', spiritId)
       .single();
@@ -480,7 +480,7 @@ export async function POST(request: NextRequest) {
     // Update database if not dry run
     if (!dryRun) {
       const { error: updateError } = await supabase
-        .from('spirits')
+        .from('bv_spirits')
         .update({
           image_url: result.url,
           image_source: result.source,
