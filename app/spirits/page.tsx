@@ -19,30 +19,6 @@ interface Spirit {
   origin?: string
 }
 
-// FIXED: Generic spirit images that don't show branded products
-// Using images that show glasses, barrels, or generic bottles - NOT specific brands
-const SPIRIT_IMAGES: Record<string, string> = {
-  bourbon: 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=400&h=600&fit=crop',
-  scotch: 'https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=400&h=600&fit=crop',
-  whiskey: 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=400&h=600&fit=crop',
-  wine: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400&h=600&fit=crop',
-  beer: 'https://images.unsplash.com/photo-1535958636474-b021ee887b13?w=400&h=600&fit=crop',
-  rum: 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=400&h=600&fit=crop',
-  tequila: 'https://images.unsplash.com/photo-1546171753-97d7676e4602?w=400&h=600&fit=crop',
-  vodka: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=400&h=600&fit=crop',
-  gin: 'https://images.unsplash.com/photo-1608270586620-248524c67de9?w=400&h=600&fit=crop',
-  cognac: 'https://images.unsplash.com/photo-1619451334792-150fd785ee74?w=400&h=600&fit=crop',
-  brandy: 'https://images.unsplash.com/photo-1619451334792-150fd785ee74?w=400&h=600&fit=crop',
-  mezcal: 'https://images.unsplash.com/photo-1546171753-97d7676e4602?w=400&h=600&fit=crop',
-  sake: 'https://images.unsplash.com/photo-1553361371-9b22f78e8b1d?w=400&h=600&fit=crop',
-  rye: 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=400&h=600&fit=crop',
-  irish: 'https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=400&h=600&fit=crop',
-  japanese: 'https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=400&h=600&fit=crop',
-  liqueur: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=400&h=600&fit=crop',
-  other: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=400&h=600&fit=crop',
-  default: 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=400&h=600&fit=crop'
-}
-
 // Fallback featured spirits with real data
 const FEATURED_SPIRITS: Spirit[] = [
   {
@@ -102,14 +78,22 @@ export default function SpiritsPage() {
   const fetchSpirits = useCallback(async () => {
     setLoading(true)
     setError(null)
-
+    
     try {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: ITEMS_PER_PAGE.toString(),
-        ...(selectedCategory !== 'all' && { category: selectedCategory }),
-        ...(searchQuery && { search: searchQuery })
+        sortBy: sortBy === 'rating' ? 'msrp' : sortBy === 'price_low' ? 'msrp' : 'name',
+        sortOrder: sortBy === 'price_low' ? 'asc' : 'desc',
       })
+      
+      if (selectedCategory !== 'all') {
+        params.append('category', selectedCategory)
+      }
+      
+      if (searchQuery) {
+        params.append('search', searchQuery)
+      }
 
       const response = await fetch(`/api/spirits?${params}`)
       
@@ -118,56 +102,27 @@ export default function SpiritsPage() {
       }
 
       const data = await response.json()
-      
-      if (data.spirits && data.spirits.length > 0) {
-        setSpirits(data.spirits)
-        setTotalCount(data.total)
-        setCategoryCounts(data.categoryCounts || {})
-      } else {
-        const filtered = FEATURED_SPIRITS.filter(s => 
-          selectedCategory === 'all' || s.category === selectedCategory
-        ).filter(s =>
-          !searchQuery || s.name.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-        setSpirits(filtered)
-        setTotalCount(filtered.length)
-        
-        const counts: Record<string, number> = {}
-        FEATURED_SPIRITS.forEach(s => {
-          counts[s.category] = (counts[s.category] || 0) + 1
-        })
-        setCategoryCounts(counts)
-      }
+      setSpirits(data.spirits || [])
+      setTotalCount(data.total || 0)
+      setCategoryCounts(data.categoryCounts || {})
     } catch (err) {
-      console.error('Fetch error:', err)
-      const filtered = FEATURED_SPIRITS.filter(s => 
-        selectedCategory === 'all' || s.category === selectedCategory
-      )
-      setSpirits(filtered)
-      setTotalCount(filtered.length)
-      
-      const counts: Record<string, number> = {}
-      FEATURED_SPIRITS.forEach(s => {
-        counts[s.category] = (counts[s.category] || 0) + 1
-      })
-      setCategoryCounts(counts)
+      console.error('Error fetching spirits:', err)
+      setError('Failed to load spirits. Please try again.')
+      setSpirits(FEATURED_SPIRITS)
     } finally {
       setLoading(false)
     }
-  }, [page, selectedCategory, searchQuery])
+  }, [page, selectedCategory, searchQuery, sortBy])
 
   useEffect(() => {
     fetchSpirits()
   }, [fetchSpirits])
 
-  // FIXED: Always return proper generic image based on category
+  // FIXED: Use the actual image_url from the database - NO FALLBACKS
+  // The database contains REAL product images from OpenFoodFacts, Buffalo Trace Media Kit, etc.
   const getImageUrl = (spirit: Spirit) => {
-    // Use the spirit's stored image_url if it's a valid generic URL
-    // Otherwise fall back to our category defaults
-    if (spirit.image_url && !spirit.image_url.includes('photo-1569529465841') && !spirit.image_url.includes('photo-1516535794938')) {
-      return spirit.image_url
-    }
-    return SPIRIT_IMAGES[spirit.category] || SPIRIT_IMAGES.default
+    // Return the database image_url directly - it has real product photos
+    return spirit.image_url || '/placeholder-bottle.png'
   }
 
   const sortedSpirits = [...spirits].sort((a, b) => {
@@ -177,28 +132,52 @@ export default function SpiritsPage() {
     return a.name.localeCompare(b.name)
   })
 
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE)
+  const allCount = Object.values(categoryCounts).reduce((sum, count) => sum + count, 0)
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-stone-950 via-amber-950/10 to-stone-950 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-stone-950 via-stone-900 to-amber-950">
       {/* Header */}
-      <header className="border-b border-amber-900/30 bg-black/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="text-2xl font-bold text-amber-500">🥃 BarrelVerse</Link>
-          <nav className="flex items-center gap-4">
-            <Link href="/collection" className="hover:text-amber-400 transition-colors">My Collection</Link>
-            <Link href="/stores" className="hover:text-amber-400 transition-colors">Find Stores</Link>
-            <Link href="/auth/login" className="bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg">Sign In</Link>
-          </nav>
+      <header className="sticky top-0 z-50 bg-stone-950/95 backdrop-blur-md border-b border-amber-500/20">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-2">
+              <span className="text-2xl">🥃</span>
+              <span className="text-xl font-bold bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
+                BarrelVerse
+              </span>
+            </Link>
+            <nav className="hidden md:flex items-center gap-6">
+              <Link href="/" className="text-stone-400 hover:text-amber-400 transition-colors">Home</Link>
+              <Link href="/spirits" className="text-amber-400">Spirits</Link>
+              <Link href="/collection" className="text-stone-400 hover:text-amber-400 transition-colors">Collection</Link>
+              <Link href="/games" className="text-stone-400 hover:text-amber-400 transition-colors">Games</Link>
+              <Link href="/academy" className="text-stone-400 hover:text-amber-400 transition-colors">Academy</Link>
+            </nav>
+            <div className="flex items-center gap-4">
+              <Link href="/collection" className="text-stone-400 hover:text-amber-400 transition-colors">
+                My Collection
+              </Link>
+              <Link href="/stores" className="text-stone-400 hover:text-amber-400 transition-colors">
+                Find Stores
+              </Link>
+              <button className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-lg hover:from-amber-600 hover:to-orange-700 transition-all font-medium">
+                Sign In
+              </button>
+            </div>
+          </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <div className="bg-gradient-to-b from-amber-900/20 to-transparent py-12">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <h1 className="text-4xl font-bold text-amber-400 mb-4">Explore Our Spirit Collection</h1>
-          <p className="text-stone-400 mb-8">{totalCount.toLocaleString()} spirits from around the world</p>
-          
-          {/* Search */}
-          <div className="max-w-xl mx-auto">
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        {/* Hero Section */}
+        <div className="text-center mb-8">
+          <p className="text-stone-400">{totalCount.toLocaleString()} spirits from around the world</p>
+        </div>
+
+        {/* Search Bar */}
+        <div className="max-w-2xl mx-auto mb-8">
+          <div className="relative">
             <input
               type="text"
               placeholder="Search spirits..."
@@ -207,72 +186,92 @@ export default function SpiritsPage() {
                 setSearchQuery(e.target.value)
                 setPage(1)
               }}
-              className="w-full px-4 py-3 bg-stone-800/50 border border-amber-900/30 rounded-lg focus:outline-none focus:border-amber-500"
+              className="w-full px-6 py-4 bg-stone-800/50 border border-stone-700 rounded-xl text-white placeholder-stone-500 focus:outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/20"
             />
           </div>
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Category Filter */}
-        <div className="flex gap-2 overflow-x-auto pb-4 mb-8">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => {
-                setSelectedCategory(cat.id)
-                setPage(1)
-              }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all ${
-                selectedCategory === cat.id
-                  ? 'bg-amber-600 text-white'
-                  : 'bg-stone-800/50 hover:bg-stone-700/50'
-              }`}
-            >
-              <span>{cat.icon}</span>
-              <span>{cat.name}</span>
-              <span className="text-sm opacity-70">
-                {categoryCounts[cat.id] || (cat.id === 'all' ? totalCount : 0)}
-              </span>
-            </button>
-          ))}
+        {/* Category Tabs */}
+        <div className="mb-8 overflow-x-auto">
+          <div className="flex gap-2 pb-2">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => {
+                  setSelectedCategory(cat.id)
+                  setPage(1)
+                }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all ${
+                  selectedCategory === cat.id
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-stone-800/50 text-stone-400 hover:bg-stone-700/50'
+                }`}
+              >
+                <span>{cat.icon}</span>
+                <span>{cat.name}</span>
+                <span className="text-sm opacity-75">
+                  {cat.id === 'all' ? allCount : categoryCounts[cat.id] || 0}
+                </span>
+              </button>
+            ))}
+          </div>
+          {/* Progress bar */}
+          <div className="h-1 bg-stone-800 rounded-full mt-4">
+            <div 
+              className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500"
+              style={{ width: `${((page - 1) * ITEMS_PER_PAGE + spirits.length) / totalCount * 100}%` }}
+            />
+          </div>
         </div>
 
-        {/* Results Info & Sort */}
-        <div className="flex justify-between items-center mb-6">
+        {/* Results Header */}
+        <div className="flex items-center justify-between mb-6">
           <p className="text-stone-400">
-            Showing {sortedSpirits.length} spirits
+            Showing {spirits.length} spirits
           </p>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="bg-stone-800 border border-stone-700 rounded-lg px-3 py-2"
+            className="px-4 py-2 bg-stone-800/50 border border-stone-700 rounded-lg text-white focus:outline-none focus:border-amber-500/50"
           >
             <option value="rating">Highest Rated</option>
-            <option value="name">Name A-Z</option>
             <option value="price_low">Price: Low to High</option>
             <option value="price_high">Price: High to Low</option>
+            <option value="name">Name</option>
           </select>
         </div>
 
         {/* Loading State */}
         {loading && (
-          <div className="flex justify-center py-12">
+          <div className="flex items-center justify-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-500"></div>
           </div>
         )}
 
-        {/* Spirit Grid */}
-        {!loading && (
+        {/* Error State */}
+        {error && (
+          <div className="text-center py-20">
+            <p className="text-red-400 mb-4">{error}</p>
+            <button
+              onClick={fetchSpirits}
+              className="px-6 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
+
+        {/* Spirits Grid */}
+        {!loading && !error && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             {sortedSpirits.map((spirit) => (
               <div
                 key={spirit.id}
-                className="bg-stone-800/50 rounded-lg overflow-hidden hover:bg-stone-700/50 transition-all cursor-pointer group"
                 onClick={() => {
                   setSelectedSpirit(spirit)
                   setShowModal(true)
                 }}
+                className="group cursor-pointer bg-stone-800/30 rounded-xl overflow-hidden border border-stone-700/50 hover:border-amber-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-amber-500/10"
               >
                 {/* Image */}
                 <div className="aspect-[3/4] relative overflow-hidden bg-stone-900">
@@ -281,14 +280,15 @@ export default function SpiritsPage() {
                     alt={spirit.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = SPIRIT_IMAGES.default
+                      // If image fails, try a simple placeholder
+                      (e.target as HTMLImageElement).src = '/placeholder-bottle.png'
                     }}
                   />
                 </div>
                 {/* Info */}
                 <div className="p-4">
                   <h3 className="font-semibold text-white truncate">{spirit.name}</h3>
-                  <p className="text-sm text-stone-400">{spirit.brand || spirit.category}</p>
+                  <p className="text-sm text-stone-400 truncate">{spirit.brand || spirit.category}</p>
                 </div>
               </div>
             ))}
@@ -296,34 +296,38 @@ export default function SpiritsPage() {
         )}
 
         {/* Pagination */}
-        {totalCount > ITEMS_PER_PAGE && (
-          <div className="flex justify-center gap-2 mt-8">
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-8">
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="px-4 py-2 bg-stone-800 rounded-lg disabled:opacity-50"
+              className="px-4 py-2 bg-stone-800/50 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-stone-700/50 transition-colors"
             >
               Previous
             </button>
-            <span className="px-4 py-2">
-              Page {page} of {Math.ceil(totalCount / ITEMS_PER_PAGE)}
+            <span className="text-stone-400">
+              Page {page} of {totalPages}
             </span>
             <button
-              onClick={() => setPage(p => p + 1)}
-              disabled={page >= Math.ceil(totalCount / ITEMS_PER_PAGE)}
-              className="px-4 py-2 bg-stone-800 rounded-lg disabled:opacity-50"
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-4 py-2 bg-stone-800/50 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-stone-700/50 transition-colors"
             >
               Next
             </button>
           </div>
         )}
-      </div>
 
-      {/* Modal */}
-      {showModal && selectedSpirit && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
-          <div className="bg-stone-900 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="p-6">
+        {/* Detail Modal */}
+        {showModal && selectedSpirit && (
+          <div 
+            className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowModal(false)}
+          >
+            <div 
+              className="bg-stone-900 rounded-2xl max-w-2xl w-full p-6 border border-stone-700"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="flex gap-6">
                 <img
                   src={getImageUrl(selectedSpirit)}
@@ -334,21 +338,41 @@ export default function SpiritsPage() {
                   <h2 className="text-2xl font-bold text-amber-400 mb-2">{selectedSpirit.name}</h2>
                   <p className="text-stone-400 mb-4">{selectedSpirit.brand}</p>
                   <p className="text-stone-300 mb-4">{selectedSpirit.description}</p>
-                  {selectedSpirit.price && (
-                    <p className="text-xl text-amber-500">${selectedSpirit.price}</p>
-                  )}
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-stone-500">Category:</span>
+                      <span className="ml-2 text-white capitalize">{selectedSpirit.category}</span>
+                    </div>
+                    {selectedSpirit.proof && (
+                      <div>
+                        <span className="text-stone-500">Proof:</span>
+                        <span className="ml-2 text-white">{selectedSpirit.proof}</span>
+                      </div>
+                    )}
+                    {selectedSpirit.price && (
+                      <div>
+                        <span className="text-stone-500">MSRP:</span>
+                        <span className="ml-2 text-amber-400">${selectedSpirit.price}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-              <button
-                onClick={() => setShowModal(false)}
-                className="mt-6 w-full py-3 bg-amber-600 hover:bg-amber-500 rounded-lg"
-              >
-                Close
-              </button>
+              <div className="flex gap-4 mt-6">
+                <button className="flex-1 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-lg font-medium hover:from-amber-600 hover:to-orange-700 transition-all">
+                  Add to Collection
+                </button>
+                <button 
+                  onClick={() => setShowModal(false)}
+                  className="px-6 py-3 bg-stone-800 text-white rounded-lg hover:bg-stone-700 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </main>
     </div>
   )
 }
