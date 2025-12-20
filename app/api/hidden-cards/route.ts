@@ -2,8 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 // Define types for the API
-interface QueueTask {
-  status: string;
+interface HiddenCard {
+  id: string;
+  name: string;
+  description: string;
+  image_url: string;
+  rarity: string;
+  series: string;
+  xp_reward: number;
+  credit_reward: number;
+  max_supply: number | null;
+  is_secret: boolean;
+  unlock_code: string | null;
+  location_hint: string | null;
 }
 
 // Hidden card discovery endpoint
@@ -36,27 +47,30 @@ export async function POST(request: NextRequest) {
     }
 
     // Get card details
-    const { data: card } = await supabase
+    const { data: card, error: cardError } = await supabase
       .from('hidden_cards')
       .select('*')
       .eq('id', cardId)
       .single();
 
-    if (!card) {
+    if (cardError || !card) {
       return NextResponse.json(
         { error: 'Card not found' },
         { status: 404 }
       );
     }
 
+    // Cast to typed card
+    const typedCard = card as HiddenCard;
+
     // Check supply limits
-    if (card.max_supply) {
+    if (typedCard.max_supply) {
       const { count } = await supabase
         .from('user_digital_cards')
         .select('id', { count: 'exact' })
         .eq('card_id', cardId);
 
-      if (count && count >= card.max_supply) {
+      if (count && count >= typedCard.max_supply) {
         return NextResponse.json(
           { error: 'Card supply exhausted', soldOut: true },
           { status: 410 }
@@ -93,8 +107,8 @@ export async function POST(request: NextRequest) {
     try {
       await supabase.rpc('add_user_rewards', {
         p_user_id: userId,
-        p_xp: card.xp_reward,
-        p_credits: card.credit_reward
+        p_xp: typedCard.xp_reward,
+        p_credits: typedCard.credit_reward
       });
     } catch (rpcError) {
       // RPC may not exist yet, just log it
@@ -115,13 +129,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       card: {
-        ...card,
+        ...typedCard,
         instanceNumber,
         isFoil
       },
       rewards: {
-        xp: card.xp_reward,
-        credits: card.credit_reward
+        xp: typedCard.xp_reward,
+        credits: typedCard.credit_reward
       }
     });
 
