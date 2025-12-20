@@ -7,22 +7,34 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// Rarity order for sorting (higher number = more rare = shown first)
+const RARITY_ORDER: Record<string, number> = {
+  'legendary': 5,
+  'very_rare': 4,
+  'rare': 3,
+  'uncommon': 2,
+  'common': 1,
+};
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category');
     const search = searchParams.get('search');
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '12');
-    const sortBy = searchParams.get('sortBy') || 'name';
-    const sortOrder = searchParams.get('sortOrder') || 'asc';
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const sortBy = searchParams.get('sortBy') || 'msrp';
+    const sortOrder = searchParams.get('sortOrder') || 'desc';
     
     const offset = (page - 1) * limit;
 
-    // Build query
+    // Build query - only get actual spirits (filter out food items with alcohol)
     let query = supabase
       .from('bv_spirits')
-      .select('*', { count: 'exact' });
+      .select('*', { count: 'exact' })
+      // Filter to only include actual spirits - exclude food items
+      .not('description', 'ilike', '%Imported from Open Food Facts. Barcode:%')
+      .or('description.is.null,description.not.ilike.%Imported from Open Food Facts%,brand.in.(Buffalo Trace,Blanton\'s,Pappy Van Winkle,Maker\'s Mark,Woodford Reserve,Wild Turkey,Four Roses,Knob Creek,Jim Beam,Elijah Craig,Angel\'s Envy,Michter\'s,Old Forester,Russell\'s Reserve,Booker\'s,Henry McKenna,Stagg Jr,George T. Stagg,E.H. Taylor,Eagle Rare,W.L. Weller,Sazerac,Old Rip Van Winkle,Van Winkle,Blanton\'s,Colonel E.H. Taylor,The Macallan,Glenfiddich,Glenlivet,Lagavulin,Laphroaig,Ardbeg,Highland Park,Oban,Talisker,Balvenie,Dalmore,Johnnie Walker,Patron,Don Julio,Casamigos,Clase Azul,Grey Goose,Belvedere,Hendrick\'s,Tanqueray,Bombay Sapphire,Bacardi,Captain Morgan,Diplomatico)');
 
     // Apply category filter
     if (category && category !== 'all') {
@@ -34,10 +46,10 @@ export async function GET(request: NextRequest) {
       query = query.or(`name.ilike.%${search}%,brand.ilike.%${search}%,distillery.ilike.%${search}%`);
     }
 
-    // Apply sorting
-    const validSortFields = ['name', 'msrp', 'proof', 'category', 'created_at'];
-    const sortField = validSortFields.includes(sortBy) ? sortBy : 'name';
-    query = query.order(sortField, { ascending: sortOrder === 'asc' });
+    // Apply sorting - default to MSRP descending to show premium spirits first
+    const validSortFields = ['name', 'msrp', 'proof', 'category', 'created_at', 'rarity'];
+    const sortField = validSortFields.includes(sortBy) ? sortBy : 'msrp';
+    query = query.order(sortField, { ascending: sortOrder === 'asc', nullsFirst: false });
 
     // Apply pagination
     query = query.range(offset, offset + limit - 1);
@@ -49,14 +61,14 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
-    // FIXED: Return spirits exactly as they are from the database
-    // The database has REAL product images from OpenFoodFacts, Buffalo Trace Media Kit, etc.
-    // DO NOT replace with generic Unsplash fallbacks!
+    // Return spirits with their real database images
     const spiritsWithImages = (spirits || []).map(spirit => ({
       ...spirit,
-      // Use the database image_url directly - no fallbacks
       image_url: spirit.image_url,
-      thumbnail_url: spirit.image_url, // Use same real image for thumbnails
+      thumbnail_url: spirit.image_url,
+      // Add rating based on rarity for sorting in frontend
+      rating: RARITY_ORDER[spirit.rarity] || 1,
+      price: spirit.msrp,
     }));
 
     // Get category counts
@@ -80,14 +92,13 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching spirits:', error);
     
-    // Return error response
     return NextResponse.json(
       { 
         error: 'Failed to fetch spirits',
         spirits: [],
         total: 0,
         page: 1,
-        limit: 12,
+        limit: 20,
         totalPages: 0,
         categoryCounts: {},
       },
