@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60; // 60 second timeout
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -20,16 +24,11 @@ const VERIFIED_IMAGES: Record<string, string> = {
   'pappy': 'https://wordpress-1508494-5786922.cloudwaysapps.com/wp-content/uploads/2025/11/OLD_-RIP_VAN_WINKLE_10_B0TTLE.png',
   'traveller': 'https://wordpress-1508494-5786922.cloudwaysapps.com/wp-content/uploads/2025/11/TRAVELLER_BOTTLE.png',
   'michter': 'https://michters.com/wp-content/uploads/2025/01/BOURB750_418x1378100_2023.jpg',
-  'maker\'s mark': 'https://images.openfoodfacts.org/images/products/008/501/000/0017/front_en.16.400.jpg',
-  'wild turkey': 'https://images.openfoodfacts.org/images/products/008/043/264/0022/front_en.16.400.jpg',
-  'jack daniel': 'https://images.openfoodfacts.org/images/products/008/200/016/2039/front_en.47.400.jpg',
-  'jim beam': 'https://images.openfoodfacts.org/images/products/506/004/558/5271/front_de.6.400.jpg',
-  'bulleit': 'https://images.openfoodfacts.org/images/products/008/200/001/0008/front_en.19.400.jpg',
 };
 
 // Find verified image for a spirit
 function findVerifiedImage(name: string, brand: string): string | null {
-  const searchText = `${name} ${brand}`.toLowerCase();
+  const searchText = \`\${name} \${brand}\`.toLowerCase();
   for (const [pattern, url] of Object.entries(VERIFIED_IMAGES)) {
     if (searchText.includes(pattern)) {
       return url;
@@ -39,18 +38,17 @@ function findVerifiedImage(name: string, brand: string): string | null {
 }
 
 // Download image and return as buffer
-async function downloadImage(url: string): Promise<Buffer | null> {
+async function downloadImage(url: string): Promise<ArrayBuffer | null> {
   try {
     const response = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; BarrelVerseBot/1.0)' },
-      signal: AbortSignal.timeout(30000)
     });
     
     if (!response.ok) return null;
     
-    const arrayBuffer = await response.arrayBuffer();
-    return Buffer.from(arrayBuffer);
-  } catch {
+    return await response.arrayBuffer();
+  } catch (e) {
+    console.error('Download error:', e);
     return null;
   }
 }
@@ -63,9 +61,9 @@ async function processSpirit(spirit: any): Promise<{ id: string; newUrl: string 
   let sourceUrl = findVerifiedImage(name || '', brand || '');
   
   // 2. If no verified image, try existing URL
-  if (!sourceUrl && image_url) {
+  if (!sourceUrl && image_url && !image_url.includes('unsplash')) {
     try {
-      const check = await fetch(image_url, { method: 'HEAD', signal: AbortSignal.timeout(5000) });
+      const check = await fetch(image_url, { method: 'HEAD' });
       if (check.ok) sourceUrl = image_url;
     } catch {}
   }
@@ -77,7 +75,7 @@ async function processSpirit(spirit: any): Promise<{ id: string; newUrl: string 
   if (!imageBuffer) return null;
   
   // 4. Upload to Supabase Storage
-  const filename = `${id}.jpg`;
+  const filename = \`\${id}.jpg\`;
   const { error } = await supabase.storage
     .from(BUCKET_NAME)
     .upload(filename, imageBuffer, {
@@ -86,24 +84,27 @@ async function processSpirit(spirit: any): Promise<{ id: string; newUrl: string 
     });
   
   if (error) {
-    console.error(`Upload failed for ${id}:`, error.message);
+    console.error(\`Upload failed for \${id}:\`, error.message);
     return null;
   }
   
   // 5. Return the new self-hosted URL
-  const newUrl = `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/${filename}`;
+  const newUrl = \`\${supabaseUrl}/storage/v1/object/public/\${BUCKET_NAME}/\${filename}\`;
   return { id, newUrl };
 }
 
-// API Route Handler
+// API Route Handler - POST to process batch
 export async function POST(request: NextRequest) {
   try {
-    const { batchSize = 50, offset = 0 } = await request.json().catch(() => ({}));
+    const body = await request.json().catch(() => ({}));
+    const batchSize = body.batchSize || 50;
+    const offset = body.offset || 0;
     
     // Ensure bucket exists
     const { data: buckets } = await supabase.storage.listBuckets();
     if (!buckets?.some(b => b.name === BUCKET_NAME)) {
       await supabase.storage.createBucket(BUCKET_NAME, { public: true });
+      console.log('Created bucket:', BUCKET_NAME);
     }
     
     // Fetch batch of spirits
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
       });
     }
     
-    // Process spirits in parallel (max 10 concurrent)
+    // Process spirits
     const results = await Promise.all(
       spirits.map(spirit => processSpirit(spirit))
     );
@@ -163,7 +164,7 @@ export async function GET() {
     const { count: hosted } = await supabase
       .from('bv_spirits')
       .select('*', { count: 'exact', head: true })
-      .like('image_url', `${supabaseUrl}/storage/%`);
+      .like('image_url', \`%supabase%storage%\`);
     
     // Check bucket
     const { data: buckets } = await supabase.storage.listBuckets();
@@ -175,7 +176,7 @@ export async function GET() {
       remaining: (total || 0) - (hosted || 0),
       percentComplete: total ? Math.round(((hosted || 0) / total) * 100) : 0,
       bucketExists,
-      bucketUrl: `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/`
+      bucketUrl: \`\${supabaseUrl}/storage/v1/object/public/\${BUCKET_NAME}/\`
     });
     
   } catch (error: any) {
