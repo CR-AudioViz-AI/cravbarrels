@@ -15,7 +15,8 @@ import {
   Sparkles,
   CheckCircle,
   ArrowRight,
-  Download
+  Download,
+  Loader2
 } from 'lucide-react';
 
 const AUDIENCE_STATS = {
@@ -119,12 +120,35 @@ export default function AdvertisePage() {
     message: ''
   });
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Connect to Supabase to store leads
-    console.log('Advertising inquiry:', formData);
-    setSubmitted(true);
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/advertising/leads', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to submit inquiry');
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -403,6 +427,12 @@ export default function AdvertisePage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="bg-stone-900/50 rounded-xl p-8 border border-stone-800">
+              {error && (
+                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400">
+                  {error}
+                </div>
+              )}
+              
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-stone-300 mb-2">
@@ -536,10 +566,20 @@ export default function AdvertisePage() {
 
               <button
                 type="submit"
-                className="mt-6 w-full py-4 bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                disabled={loading}
+                className="mt-6 w-full py-4 bg-amber-600 hover:bg-amber-500 disabled:bg-amber-600/50 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
               >
-                Submit Inquiry
-                <ArrowRight className="w-5 h-5" />
+                {loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    Submit Inquiry
+                    <ArrowRight className="w-5 h-5" />
+                  </>
+                )}
               </button>
             </form>
           )}
@@ -552,7 +592,6 @@ export default function AdvertisePage() {
           <div className="text-center">
             <h3 className="text-lg font-medium text-stone-400 mb-8">Trusted by Leading Brands</h3>
             <div className="flex flex-wrap justify-center gap-12 opacity-50">
-              {/* Placeholder for brand logos */}
               <div className="text-2xl font-bold text-stone-600">Buffalo Trace</div>
               <div className="text-2xl font-bold text-stone-600">Woodford Reserve</div>
               <div className="text-2xl font-bold text-stone-600">Angel&apos;s Envy</div>
