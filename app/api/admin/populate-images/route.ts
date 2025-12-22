@@ -1,10 +1,8 @@
 /**
  * CRAV Barrels - Batch Image Population API
  * 
- * POST /api/admin/populate-images
- * 
- * Automatically fetches and saves images for spirits that don't have them.
- * Uses Wikidata, Wikimedia Commons, and Openverse.
+ * POST /api/admin/populate-images - Fetch and save images for spirits
+ * GET /api/admin/populate-images - Get image coverage stats
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -15,8 +13,7 @@ const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-// Rate limiting
-const DELAY_BETWEEN_REQUESTS = 1500; // 1.5 seconds between API calls
+const DELAY_BETWEEN_REQUESTS = 1500;
 
 interface ImageResult {
   url: string;
@@ -29,11 +26,8 @@ interface ImageResult {
   height?: number;
 }
 
-/**
- * Search Wikimedia Commons for bottle images
- */
 async function searchWikimedia(spiritName: string, brand?: string): Promise<ImageResult[]> {
-  const searchTerms = brand ? `${brand} ${spiritName} bottle` : `${spiritName} bottle`;
+  const searchTerms = brand ? `${brand} ${spiritName} bottle` : `${spiritName} bottle whiskey`;
   
   const params = new URLSearchParams({
     action: 'query',
@@ -45,34 +39,30 @@ async function searchWikimedia(spiritName: string, brand?: string): Promise<Imag
     origin: '*'
   });
 
-  const response = await fetch(
-    `https://commons.wikimedia.org/w/api.php?${params}`,
-    {
-      headers: {
-        'User-Agent': 'CRAVBarrels/1.0 (https://cravbarrels.com)'
-      }
+  try {
+    const response = await fetch(
+      `https://commons.wikimedia.org/w/api.php?${params}`,
+      { headers: { 'User-Agent': 'CRAVBarrels/1.0 (https://cravbarrels.com)' } }
+    );
+
+    if (!response.ok) return [];
+
+    const data = await response.json();
+    const results: ImageResult[] = [];
+
+    for (const item of (data.query?.search || []).slice(0, 3)) {
+      const imageInfo = await getImageInfo(item.title);
+      if (imageInfo) results.push(imageInfo);
+      await sleep(300);
     }
-  );
 
-  if (!response.ok) return [];
-
-  const data = await response.json();
-  const results: ImageResult[] = [];
-
-  for (const item of (data.query?.search || []).slice(0, 5)) {
-    const imageInfo = await getImageInfo(item.title);
-    if (imageInfo) {
-      results.push(imageInfo);
-    }
-    await sleep(500);
+    return results;
+  } catch (error) {
+    console.error('Wikimedia search failed:', error);
+    return [];
   }
-
-  return results;
 }
 
-/**
- * Get detailed image info from Wikimedia
- */
 async function getImageInfo(fileTitle: string): Promise<ImageResult | null> {
   const params = new URLSearchParams({
     action: 'query',
@@ -83,46 +73,43 @@ async function getImageInfo(fileTitle: string): Promise<ImageResult | null> {
     origin: '*'
   });
 
-  const response = await fetch(
-    `https://commons.wikimedia.org/w/api.php?${params}`,
-    {
-      headers: {
-        'User-Agent': 'CRAVBarrels/1.0 (https://cravbarrels.com)'
-      }
-    }
-  );
+  try {
+    const response = await fetch(
+      `https://commons.wikimedia.org/w/api.php?${params}`,
+      { headers: { 'User-Agent': 'CRAVBarrels/1.0 (https://cravbarrels.com)' } }
+    );
 
-  if (!response.ok) return null;
+    if (!response.ok) return null;
 
-  const data = await response.json();
-  const pages = data.query?.pages || {};
-  const page = Object.values(pages)[0] as any;
+    const data = await response.json();
+    const pages = data.query?.pages || {};
+    const page = Object.values(pages)[0] as any;
 
-  if (!page?.imageinfo?.[0]) return null;
+    if (!page?.imageinfo?.[0]) return null;
 
-  const info = page.imageinfo[0];
-  const meta = info.extmetadata || {};
+    const info = page.imageinfo[0];
+    const meta = info.extmetadata || {};
 
-  let license = 'cc0';
-  const licenseShort = (meta.LicenseShortName?.value || '').toLowerCase();
-  if (licenseShort.includes('cc-by-sa')) license = 'cc-by-sa';
-  else if (licenseShort.includes('cc-by')) license = 'cc-by';
+    let license = 'cc0';
+    const licenseShort = (meta.LicenseShortName?.value || '').toLowerCase();
+    if (licenseShort.includes('cc-by-sa')) license = 'cc-by-sa';
+    else if (licenseShort.includes('cc-by')) license = 'cc-by';
 
-  return {
-    url: info.url,
-    thumbnail_url: info.thumburl,
-    source: 'wikimedia',
-    license,
-    attribution: meta.Artist?.value || 'Wikimedia Commons',
-    source_url: `https://commons.wikimedia.org/wiki/${encodeURIComponent(fileTitle)}`,
-    width: info.width,
-    height: info.height
-  };
+    return {
+      url: info.url,
+      thumbnail_url: info.thumburl,
+      source: 'wikimedia',
+      license,
+      attribution: meta.Artist?.value || 'Wikimedia Commons',
+      source_url: `https://commons.wikimedia.org/wiki/${encodeURIComponent(fileTitle)}`,
+      width: info.width,
+      height: info.height
+    };
+  } catch {
+    return null;
+  }
 }
 
-/**
- * Search Openverse for images
- */
 async function searchOpenverse(spiritName: string, brand?: string): Promise<ImageResult[]> {
   const searchTerms = brand ? `${brand} ${spiritName} bottle` : `${spiritName} whiskey bottle`;
   
@@ -130,24 +117,20 @@ async function searchOpenverse(spiritName: string, brand?: string): Promise<Imag
     q: searchTerms,
     license: 'cc0,by,by-sa',
     mature: 'false',
-    page_size: '10'
+    page_size: '5'
   });
 
   try {
     const response = await fetch(
       `https://api.openverse.org/v1/images/?${params}`,
-      {
-        headers: {
-          'User-Agent': 'CRAVBarrels/1.0'
-        }
-      }
+      { headers: { 'User-Agent': 'CRAVBarrels/1.0' } }
     );
 
     if (!response.ok) return [];
 
     const data = await response.json();
 
-    return (data.results || []).slice(0, 5).map((item: any) => ({
+    return (data.results || []).slice(0, 3).map((item: any) => ({
       url: item.url,
       thumbnail_url: item.thumbnail,
       source: 'openverse',
@@ -163,9 +146,6 @@ async function searchOpenverse(spiritName: string, brand?: string): Promise<Imag
   }
 }
 
-/**
- * Save image to database
- */
 async function saveImage(spiritId: string, image: ImageResult, isPrimary: boolean) {
   const { data, error } = await supabase
     .from('spirit_images')
@@ -194,12 +174,9 @@ async function saveImage(spiritId: string, image: ImageResult, isPrimary: boolea
   return data;
 }
 
-/**
- * Update spirit with primary image
- */
 async function updateSpiritPrimaryImage(spiritId: string, imageId: string) {
   await supabase
-    .from('spirits')
+    .from('bv_spirits')
     .update({ primary_image_id: imageId })
     .eq('id', spiritId);
 }
@@ -210,19 +187,18 @@ function sleep(ms: number) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const limit = Math.min(body.limit || 50, 200); // Max 200 at a time
+    const body = await request.json().catch(() => ({}));
+    const limit = Math.min(body.limit || 50, 200);
     const priorityOnly = body.priorityOnly || false;
 
-    // Get spirits without images
+    // Get spirits without images - use bv_spirits table
     let query = supabase
-      .from('spirits')
+      .from('bv_spirits')
       .select('id, name, brand, spirit_type')
       .is('primary_image_id', null);
 
     if (priorityOnly) {
-      // Priority spirits (popular brands)
-      query = query.or('brand.ilike.%pappy%,brand.ilike.%buffalo trace%,brand.ilike.%makers mark%,brand.ilike.%jack daniels%,brand.ilike.%johnnie walker%,brand.ilike.%macallan%,brand.ilike.%glenfiddich%');
+      query = query.or('brand.ilike.%pappy%,brand.ilike.%buffalo trace%,brand.ilike.%makers mark%,brand.ilike.%jack daniels%,brand.ilike.%johnnie walker%,brand.ilike.%macallan%,brand.ilike.%glenfiddich%,brand.ilike.%blanton%,brand.ilike.%weller%,brand.ilike.%eagle rare%');
     }
 
     const { data: spirits, error } = await query.limit(limit);
@@ -243,7 +219,6 @@ export async function POST(request: NextRequest) {
       results.processed++;
 
       try {
-        // Search both sources
         const wikimediaImages = await searchWikimedia(spirit.name, spirit.brand);
         await sleep(DELAY_BETWEEN_REQUESTS);
         
@@ -254,7 +229,6 @@ export async function POST(request: NextRequest) {
         results.imagesFound += allImages.length;
 
         if (allImages.length > 0) {
-          // Save the best image as primary
           const primaryImage = await saveImage(spirit.id, allImages[0], true);
           
           if (primaryImage) {
@@ -263,8 +237,7 @@ export async function POST(request: NextRequest) {
             await updateSpiritPrimaryImage(spirit.id, primaryImage.id);
           }
 
-          // Save up to 4 more as additional images
-          for (let i = 1; i < Math.min(allImages.length, 5); i++) {
+          for (let i = 1; i < Math.min(allImages.length, 3); i++) {
             const saved = await saveImage(spirit.id, allImages[i], false);
             if (saved) results.imagesSaved++;
           }
@@ -274,7 +247,6 @@ export async function POST(request: NextRequest) {
         results.errors.push(`${spirit.name}: ${error.message}`);
       }
 
-      // Progress logging
       if (results.processed % 10 === 0) {
         console.log(`Progress: ${results.processed}/${spirits?.length || 0} spirits processed`);
       }
@@ -296,19 +268,28 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  // Get stats about images
-  const { data: stats } = await supabase
-    .from('spirits')
-    .select('id, primary_image_id', { count: 'exact' });
+  try {
+    // Get stats - use bv_spirits table
+    const { count: total } = await supabase
+      .from('bv_spirits')
+      .select('*', { count: 'exact', head: true });
 
-  const total = stats?.length || 0;
-  const withImages = stats?.filter(s => s.primary_image_id).length || 0;
-  const withoutImages = total - withImages;
+    const { count: withImages } = await supabase
+      .from('bv_spirits')
+      .select('*', { count: 'exact', head: true })
+      .not('primary_image_id', 'is', null);
 
-  return NextResponse.json({
-    total_spirits: total,
-    with_images: withImages,
-    without_images: withoutImages,
-    coverage_percent: total > 0 ? ((withImages / total) * 100).toFixed(1) : 0
-  });
+    const totalCount = total || 0;
+    const withImagesCount = withImages || 0;
+    const withoutImages = totalCount - withImagesCount;
+
+    return NextResponse.json({
+      total_spirits: totalCount,
+      with_images: withImagesCount,
+      without_images: withoutImages,
+      coverage_percent: totalCount > 0 ? ((withImagesCount / totalCount) * 100).toFixed(1) : 0
+    });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 }
