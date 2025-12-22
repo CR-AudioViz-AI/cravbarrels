@@ -191,10 +191,10 @@ export async function POST(request: NextRequest) {
     const limit = Math.min(body.limit || 50, 200);
     const priorityOnly = body.priorityOnly || false;
 
-    // Get spirits without images - use bv_spirits table
+    // Get spirits without images - use bv_spirits table with correct columns
     let query = supabase
       .from('bv_spirits')
-      .select('id, name, brand, spirit_type')
+      .select('id, name, brand, category')
       .is('primary_image_id', null);
 
     if (priorityOnly) {
@@ -269,7 +269,6 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    // Get stats - use bv_spirits table
     const { count: total } = await supabase
       .from('bv_spirits')
       .select('*', { count: 'exact', head: true });
