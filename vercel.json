@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/sync-images",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/admin/populate-images",
+      "schedule": "0 3 * * *"
     }
   ]
 }
