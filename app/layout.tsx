@@ -1,76 +1,39 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-import './globals.css';
-import { ThemeProvider } from '@/components/theme-provider';
-import { Toaster } from '@/components/ui/toaster';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import JavariWidget from '@/components/JavariWidget';
-import { PlatformCrossSell } from '@/components/PlatformCrossSell';
+import Script from 'next/script';
+import type { Metadata, Viewport } from 'next'
+import { Inter } from 'next/font/google'
+import './globals.css'
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'CRAVBarrels - Premium Spirit Collection & Discovery | 22,000+ Spirits',
-  description: 'Build your dream spirit collection with CRAVBarrels. Discover 22,000+ spirits, track prices, scan barcodes, and connect with collectors worldwide. Free AI sommelier included.',
-  keywords: ['whiskey', 'bourbon', 'scotch', 'spirits', 'collection', 'rare bottles', 'tequila', 'rum', 'cognac', 'spirit scanner', 'whiskey collection', 'bourbon collection'],
-  authors: [{ name: 'CR AudioViz AI' }],
-  openGraph: {
-    title: 'CRAVBarrels - Premium Spirit Collection & Discovery',
-    description: 'Discover 22,000+ spirits. AI-powered recommendations. Barcode scanning. Collection tracking.',
-    type: 'website',
-    locale: 'en_US',
-    siteName: 'CRAVBarrels',
-    images: ['/og-image.png'],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'CRAVBarrels - 22,000+ Spirits',
-    description: 'Your premium spirit collection companion. Discover, scan, collect.',
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
-};
+  description: 'Part of the CR AudioViz AI creative ecosystem',
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  viewportFit: 'cover',
+}
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <head>
-        <link rel="icon" href="/favicon.ico" />
-        <meta name="theme-color" content="#78350f" />
+        <meta name="format-detection" content="telephone=no" />
       </head>
-      <body className={inter.className}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <div className="min-h-screen flex flex-col bg-stone-950">
-            <Navbar />
-            <main className="flex-1">{children}</main>
-            
-            {/* Platform Cross-Sell Banner */}
-            <PlatformCrossSell />
-            
-            <Footer />
-          </div>
-          
-          {/* Javari AI Assistant */}
-          <JavariWidget 
-            pageContext="cravbarrels"
-            userTier="free"
-          />
-          
-          <Toaster />
-        </ThemeProvider>
+      <body className={`${inter.className} min-h-screen min-h-[100dvh]`}>
+        <div className="min-h-screen min-h-[100dvh] bg-gradient-to-br from-gray-50 to-gray-100">
+          {children}
+        </div>
+        <Script src="https://javariai.com/embed.js" strategy="lazyOnload" />
       </body>
     </html>
-  );
+  )
 }
