@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -396,7 +396,7 @@ function StatsCard({ icon, label, value, sublabel, color = 'amber' }: {
 // ============================================
 
 export default function RewardsPage() {
-  const supabase = createClientComponentClient();
+  const [supabase] = useState(() => createClient());
   const [activeTab, setActiveTab] = useState<'achievements' | 'leaderboard' | 'certifications'>('achievements');
   const [leaderboardPeriod, setLeaderboardPeriod] = useState('all-time');
   const [achievementFilter, setAchievementFilter] = useState('all');
