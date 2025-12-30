@@ -5,19 +5,19 @@
  * 
  * POST /api/newsletter - Subscribe email
  * DELETE /api/newsletter - Unsubscribe email
- * GET /api/newsletter/verify?token=xxx - Verify email
+ * GET /api/newsletter - Get stats or verify
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 
+export const dynamic = 'force-dynamic';
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
-
-export const dynamic = 'force-dynamic';
 
 // ============================================
 // EMAIL VALIDATION
@@ -39,7 +39,7 @@ function generateToken(): string {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, source = 'website', preferences = {} } = body;
+    const { email, source = 'website', preferences = {}, user_id } = body;
     
     // Validate email
     if (!email || !isValidEmail(email)) {
@@ -50,18 +50,24 @@ export async function POST(request: NextRequest) {
     
     const normalizedEmail = email.toLowerCase().trim();
     
-    // Check if already subscribed
-    const { data: existing } = await supabase
+    // Try the dedicated newsletter table first
+    let tableExists = true;
+    const { data: existing, error: checkError } = await supabase
       .from('bv_newsletter_subscribers')
       .select('id, status, verified')
       .eq('email', normalizedEmail)
       .single();
     
-    if (existing) {
+    // If table doesn't exist, fall back to activities table
+    if (checkError?.code === 'PGRST204' || checkError?.message?.includes('Could not find')) {
+      tableExists = false;
+    }
+    
+    if (tableExists && existing) {
       if (existing.status === 'subscribed') {
         return NextResponse.json({
           success: true,
-          message: 'You\'re already subscribed! Check your inbox for our latest updates.',
+          message: "You're already subscribed! Check your inbox for our latest updates.",
           alreadySubscribed: true,
         });
       }
@@ -73,63 +79,95 @@ export async function POST(request: NextRequest) {
         await supabase
           .from('bv_newsletter_subscribers')
           .update({
-            status: 'pending',
+            status: 'subscribed',
             verification_token: verificationToken,
             resubscribed_at: new Date().toISOString(),
+            verified: true,
+            verified_at: new Date().toISOString(),
             preferences,
           })
           .eq('id', existing.id);
         
-        // Would send verification email here
-        // await sendVerificationEmail(normalizedEmail, verificationToken);
-        
         return NextResponse.json({
           success: true,
-          message: 'Welcome back! Please check your email to confirm your subscription.',
-          requiresVerification: true,
+          message: 'Welcome back! You have been resubscribed.',
+          resubscribed: true,
         });
       }
     }
     
-    // Create new subscription
-    const verificationToken = generateToken();
-    
-    const { data: subscriber, error } = await supabase
-      .from('bv_newsletter_subscribers')
-      .insert({
-        email: normalizedEmail,
-        status: 'pending',
-        source,
-        preferences,
-        verification_token: verificationToken,
-        subscribed_at: new Date().toISOString(),
-        ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
-        user_agent: request.headers.get('user-agent'),
-      })
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Newsletter signup error:', error);
-      return NextResponse.json({
-        error: 'Failed to subscribe. Please try again.',
-      }, { status: 500 });
+    if (tableExists) {
+      // Create new subscription in dedicated table
+      const verificationToken = generateToken();
+      const unsubscribeToken = generateToken();
+      
+      const { data: subscriber, error } = await supabase
+        .from('bv_newsletter_subscribers')
+        .insert({
+          email: normalizedEmail,
+          status: 'subscribed',
+          source,
+          preferences,
+          verification_token: verificationToken,
+          unsubscribe_token: unsubscribeToken,
+          subscribed_at: new Date().toISOString(),
+          verified: true,
+          verified_at: new Date().toISOString(),
+          ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+          user_agent: request.headers.get('user-agent'),
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Newsletter signup error:', error);
+        
+        // If table still doesn't exist, use fallback
+        if (error.code === 'PGRST204' || error.message?.includes('Could not find')) {
+          tableExists = false;
+        } else {
+          throw error;
+        }
+      }
     }
     
-    // For now, auto-verify (in production, would send email)
-    await supabase
-      .from('bv_newsletter_subscribers')
-      .update({
-        status: 'subscribed',
-        verified: true,
-        verified_at: new Date().toISOString(),
-      })
-      .eq('id', subscriber.id);
+    // Fallback: Log to activities table
+    if (!tableExists) {
+      // Check if already logged
+      const { data: existingActivity } = await supabase
+        .from('bv_activities')
+        .select('id')
+        .eq('action', 'newsletter_signup')
+        .eq('metadata->>email', normalizedEmail)
+        .single();
+      
+      if (existingActivity) {
+        return NextResponse.json({
+          success: true,
+          message: "You're already subscribed! Check your inbox for our latest updates.",
+          alreadySubscribed: true,
+        });
+      }
+      
+      // Log as activity
+      await supabase.from('bv_activities').insert({
+        user_id: user_id || null,
+        action: 'newsletter_signup',
+        entity_type: 'newsletter',
+        metadata: {
+          email: normalizedEmail,
+          source,
+          preferences,
+          subscribed_at: new Date().toISOString(),
+          ip_address: request.headers.get('x-forwarded-for'),
+        },
+      });
+    }
     
     // Award XP if user is logged in
-    if (body.user_id) {
+    if (user_id) {
       await supabase.from('bv_xp_log').insert({
-        user_id: body.user_id,
+        user_id: user_id,
         action: 'newsletter_signup',
         xp_earned: 25,
         reference_type: 'newsletter',
@@ -138,26 +176,29 @@ export async function POST(request: NextRequest) {
       const { data: profile } = await supabase
         .from('bv_profiles')
         .select('total_xp')
-        .eq('id', body.user_id)
+        .eq('id', user_id)
         .single();
       
       if (profile) {
         await supabase
           .from('bv_profiles')
           .update({ total_xp: (profile.total_xp || 0) + 25 })
-          .eq('id', body.user_id);
+          .eq('id', user_id);
       }
     }
     
     return NextResponse.json({
       success: true,
-      message: 'Thanks for subscribing! You\'ll receive our latest updates and exclusive offers.',
+      message: "Thanks for subscribing! You'll receive our latest updates and exclusive offers.",
       subscribed: true,
     });
     
   } catch (error: any) {
     console.error('Newsletter API error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Something went wrong. Please try again.',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    }, { status: 500 });
   }
 }
 
@@ -177,11 +218,10 @@ export async function DELETE(request: NextRequest) {
       }, { status: 400 });
     }
     
-    let query = supabase.from('bv_newsletter_subscribers');
-    
+    // Try dedicated table first
     if (token) {
-      // Unsubscribe via token (from email link)
-      const { data, error } = await query
+      const { data, error } = await supabase
+        .from('bv_newsletter_subscribers')
         .update({
           status: 'unsubscribed',
           unsubscribed_at: new Date().toISOString(),
@@ -190,33 +230,44 @@ export async function DELETE(request: NextRequest) {
         .select()
         .single();
       
-      if (error || !data) {
+      if (!error && data) {
         return NextResponse.json({
-          error: 'Invalid unsubscribe link',
-        }, { status: 400 });
+          success: true,
+          message: "You've been unsubscribed. We're sorry to see you go!",
+        });
       }
-    } else if (email) {
-      // Unsubscribe via email
+    }
+    
+    if (email) {
       const normalizedEmail = email.toLowerCase().trim();
       
-      const { error } = await query
+      const { error } = await supabase
+        .from('bv_newsletter_subscribers')
         .update({
           status: 'unsubscribed',
           unsubscribed_at: new Date().toISOString(),
         })
         .eq('email', normalizedEmail);
       
-      if (error) {
-        return NextResponse.json({
-          error: 'Failed to unsubscribe',
-        }, { status: 500 });
-      }
+      // Also mark in activities if using fallback
+      await supabase.from('bv_activities').insert({
+        action: 'newsletter_unsubscribe',
+        entity_type: 'newsletter',
+        metadata: {
+          email: normalizedEmail,
+          unsubscribed_at: new Date().toISOString(),
+        },
+      });
+      
+      return NextResponse.json({
+        success: true,
+        message: "You've been unsubscribed. We're sorry to see you go!",
+      });
     }
     
     return NextResponse.json({
-      success: true,
-      message: 'You\'ve been unsubscribed. We\'re sorry to see you go!',
-    });
+      error: 'Could not process unsubscribe request',
+    }, { status: 400 });
     
   } catch (error: any) {
     console.error('Unsubscribe error:', error);
@@ -256,12 +307,13 @@ export async function GET(request: NextRequest) {
       
       return NextResponse.json({
         success: true,
-        message: 'Email verified! You\'re all set to receive our updates.',
+        message: "Email verified! You're all set to receive our updates.",
       });
     }
     
-    // Get subscriber stats (admin only - would add auth check)
+    // Get subscriber stats
     if (action === 'stats') {
+      // Try dedicated table
       const { count: total } = await supabase
         .from('bv_newsletter_subscribers')
         .select('*', { count: 'exact', head: true });
@@ -271,18 +323,18 @@ export async function GET(request: NextRequest) {
         .select('*', { count: 'exact', head: true })
         .eq('status', 'subscribed');
       
-      const { count: thisWeek } = await supabase
-        .from('bv_newsletter_subscribers')
+      // Also count from activities as fallback
+      const { count: activitySignups } = await supabase
+        .from('bv_activities')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'subscribed')
-        .gte('subscribed_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+        .eq('action', 'newsletter_signup');
       
       return NextResponse.json({
         success: true,
         stats: {
-          total: total || 0,
+          total: (total || 0) + (activitySignups || 0),
           subscribed: subscribed || 0,
-          thisWeek: thisWeek || 0,
+          fromActivities: activitySignups || 0,
         },
       });
     }
