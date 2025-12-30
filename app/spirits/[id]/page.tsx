@@ -412,12 +412,7 @@ const SAMPLE_REVIEWS: Review[] = [
   },
 ];
 
-const SAMPLE_AFFILIATE_LINKS: AffiliateLink[] = [
-  { retailer: 'Total Wine', url: 'https://totalwine.com', price: 54.99, in_stock: true },
-  { retailer: 'Drizly', url: 'https://drizly.com', price: 59.99, in_stock: true },
-  { retailer: 'ReserveBar', url: 'https://reservebar.com', price: 64.99, in_stock: true },
-  { retailer: 'Caskers', url: 'https://caskers.com', price: 52.99, in_stock: false },
-];
+// Affiliate links are now fetched from /api/affiliates
 
 // ============================================
 // MAIN PAGE
@@ -429,7 +424,8 @@ export default function SpiritDetailPage() {
   
   const [spirit, setSpirit] = useState<Spirit | null>(null);
   const [reviews, setReviews] = useState<Review[]>(SAMPLE_REVIEWS);
-  const [affiliateLinks] = useState<AffiliateLink[]>(SAMPLE_AFFILIATE_LINKS);
+  const [affiliateLinks, setAffiliateLinks] = useState<AffiliateLink[]>([]);
+  const [affiliateLoading, setAffiliateLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'reviews' | 'buy'>('overview');
   
@@ -485,6 +481,45 @@ export default function SpiritDetailPage() {
       }
       
       setLoading(false);
+      
+      // Fetch affiliate links after spirit is loaded
+      if (data?.name || !error) {
+        fetchAffiliateLinks(data?.name || 'Buffalo Trace', data?.category || 'bourbon');
+      }
+    }
+    
+    async function fetchAffiliateLinks(spiritName: string, category: string) {
+      setAffiliateLoading(true);
+      try {
+        const params = new URLSearchParams({
+          spirit_name: spiritName,
+          category: category,
+        });
+        
+        const response = await fetch(`/api/affiliates?${params}`);
+        const data = await response.json();
+        
+        if (data.success && data.affiliateLinks) {
+          // Transform API response to match component interface
+          const links = data.affiliateLinks.map((link: any) => ({
+            retailer: link.retailer.name,
+            url: link.url,
+            price: data.priceComparison?.find((p: any) => p.retailerId === link.retailer.id)?.price,
+            in_stock: data.priceComparison?.find((p: any) => p.retailerId === link.retailer.id)?.inStock ?? true,
+            logo_url: link.retailer.logo,
+          }));
+          setAffiliateLinks(links);
+        }
+      } catch (error) {
+        console.error('Error fetching affiliate links:', error);
+        // Fallback to sample links if API fails
+        setAffiliateLinks([
+          { retailer: 'Total Wine', url: '#', price: 54.99, in_stock: true },
+          { retailer: 'Drizly', url: '#', price: 59.99, in_stock: true },
+        ]);
+      } finally {
+        setAffiliateLoading(false);
+      }
     }
     
     loadSpirit();
